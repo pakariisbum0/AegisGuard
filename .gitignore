@@ -35,6 +35,8 @@ auto-commit.log
 idea.node_modules
 # env files (can opt-in for committing if needed)
 .env*
+drizzle.config.js
+hardhat.config.js
 
 # vercel
 .vercel
