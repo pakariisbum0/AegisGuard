@@ -5,7 +5,7 @@ import { Header } from "@/app/components/Header";
 import { DepartmentCard } from "@/app/components/DepartmentCard";
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import { DepartmentSystemActions } from "@/lib/contracts/actions";
+import { DepartmentSystemActions, Department } from "@/lib/contracts/actions";
 import { setupNetwork } from "@/lib/contracts/network";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
@@ -58,29 +58,8 @@ export default function DepartmentsPage() {
         const signer = await provider.getSigner();
         const departmentSystem = new DepartmentSystemActions(provider, signer);
 
-        // Get all department addresses
-        const departmentAddresses = await departmentSystem.getAllDepartments();
-
-        // Fetch details for each department
-        const departmentDetails = await Promise.all(
-          departmentAddresses.map(async (address) => {
-            const details = await departmentSystem.getDepartmentDetails(
-              address
-            );
-            return {
-              name: details.name,
-              budget: ethers.formatEther(details.budget),
-              spent: ethers.formatEther(details.spent),
-              efficiency: `${details.efficiency}%`,
-              projects: Number(details.projects),
-              isActive: details.isActive,
-              departmentHead: details.departmentHead,
-              logoUri: details.logoUri,
-            };
-          })
-        );
-
-        setDepartments(departmentDetails);
+        const departments = await departmentSystem.fetchAllDepartments();
+        setDepartments(departments);
       } catch (err) {
         console.error("Failed to fetch departments:", err);
         setError(

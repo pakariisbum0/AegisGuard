@@ -1,0 +1,193 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Define your models
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  budget      Float
+  spent       Float
+  efficiency  Float
+  projects    Int
+  address     String?  // Wallet address
+  logo        String?  // Logo URL
+  bgColor     String?  // Background color for UI
+
+  // Relationships
+  proposals     Proposal[]
+  transactions  Transaction[]
+  activities    Activity[]
+  alerts        Alert[]
+  metrics       DepartmentMetric[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Proposal {
+  id            String   @id @default(cuid())
+  title         String
+  amount        Float
+  status        ProposalStatus @default(PENDING)
+  description   String
+  category      String
+  submittedDate DateTime @default(now())
+  reviewedDate  DateTime?
+  reviewedBy    String?      // Admin who reviewed
+  reviewNote    String?
+  
+  // Relationships
+  department    Department @relation(fields: [departmentId], references: [id])
+  departmentId  String
+  activities    Activity[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum ProposalStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  type        TransactionType
+  amount      Float
+  description String
+  status      TransactionStatus @default(PENDING)
+  txHash      String?  // Blockchain transaction hash
+  
+  // Relationships
+  department    Department @relation(fields: [departmentId], references: [id])
+  departmentId  String
+  activities    Activity[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum TransactionType {
+  BUDGET_ALLOCATION
+  PROJECT_FUNDING
+  BUDGET_UPDATE
+  EXPENSE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        ActivityType
+  description String
+  metadata    Json?    // Additional activity data
+
+  // Relationships
+  department    Department @relation(fields: [departmentId], references: [id])
+  departmentId  String
+  proposal      Proposal?  @relation(fields: [proposalId], references: [id])
+  proposalId    String?
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  transactionId String?
+  createdAt     DateTime @default(now())
+}
+
+enum ActivityType {
+  PROPOSAL_CREATED
+  PROPOSAL_UPDATED
+  PROPOSAL_APPROVED
+  PROPOSAL_REJECTED
+  BUDGET_UPDATED
+  TRANSACTION_COMPLETED
+  ALERT_TRIGGERED
+}
+
+model Alert {
+  id          String   @id @default(cuid())
+  type        AlertType
+  message     String
+  status      AlertStatus @default(ACTIVE)
+  priority    AlertPriority @default(MEDIUM)
+  
+  // Relationships
+  department    Department @relation(fields: [departmentId], references: [id])
+  departmentId  String
+  createdAt     DateTime @default(now())
+  resolvedAt    DateTime?
+}
+
+enum AlertType {
+  BUDGET_LIMIT
+  SYSTEM_NOTIFICATION
+  SECURITY_ALERT
+}
+
+enum AlertStatus {
+  ACTIVE
+  RESOLVED
+  DISMISSED
+}
+
+enum AlertPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model DepartmentMetric {
+  id          String   @id @default(cuid())
+  metric      MetricType
+  value       Float
+  target      Float?
+  status      MetricStatus
+  period      String   // e.g., "2024-03", "2024-Q1"
+  
+  // Relationships
+  department    Department @relation(fields: [departmentId], references: [id])
+  departmentId  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([departmentId, metric, period])
+}
+
+enum MetricType {
+  BUDGET_EFFICIENCY
+  PROJECT_COMPLETION
+  RESOURCE_UTILIZATION
+}
+
+enum MetricStatus {
+  ABOVE_TARGET
+  ON_TARGET
+  BELOW_TARGET
+}
+
+// For admin users
+model Admin {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  address   String   @unique  // Wallet address
+  role      AdminRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  AUDITOR
+} 
