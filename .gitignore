@@ -19,7 +19,9 @@ idea.md
 # next.js
 /.next/
 /out/
-
+hardhat.config.js
+./hardhat.config.js
+/hardhat.config.js
 # production
 /build
 

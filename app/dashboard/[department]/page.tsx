@@ -6,6 +6,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
@@ -63,6 +79,18 @@ interface BudgetUpdateForm {
   reason: string;
   category: string;
 }
+
+// Add this mock data near other data constants
+const budgetData = [
+  { month: "Jan", allocated: 64.2, spent: 62.4 },
+  { month: "Feb", allocated: 58.7, spent: 56.9 },
+  { month: "Mar", allocated: 71.3, spent: 67.8 },
+  { month: "Apr", allocated: 63.4, spent: 60.2 },
+  { month: "May", allocated: 69.2, spent: 65.7 },
+  { month: "Jun", allocated: 74.5, spent: 70.1 },
+  { month: "Jul", allocated: 61.8, spent: 59.3 },
+  { month: "Aug", allocated: 68.3, spent: 64.8 },
+];
 
 export default function DepartmentDashboard({
   params,
@@ -163,7 +191,7 @@ export default function DepartmentDashboard({
               <div className="flex gap-4">
                 <button
                   onClick={() => router.push("/auth/signin")}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-all duration-300 flex items-center gap-2"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-300 flex items-center gap-2"
                 >
                   <svg
                     className="w-4 h-4"
@@ -182,7 +210,7 @@ export default function DepartmentDashboard({
                 </button>
                 <button
                   onClick={() => setShowNewProposal(true)}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 shadow-sm hover:shadow"
+                  className="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
                 >
                   <svg
                     className="w-4 h-4"
@@ -238,14 +266,110 @@ export default function DepartmentDashboard({
                   >
                     Budget Overview
                   </h2>
-                  <select className="text-sm border-gray-300 rounded-md">
-                    <option>Last 30 Days</option>
-                    <option>Last 90 Days</option>
-                    <option>Last Year</option>
-                  </select>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="w-3 h-3 rounded-full bg-black" />
+                      <span className="text-gray-600">Allocated</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="w-3 h-3 rounded-full bg-gray-400" />
+                      <span className="text-gray-600">Spent</span>
+                    </div>
+                    <Select defaultValue="8months">
+                      <SelectTrigger className="w-[180px] text-sm border-gray-200 bg-white">
+                        <SelectValue placeholder="Select period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="8months">Last 8 Months</SelectItem>
+                        <SelectItem value="12months">Last 12 Months</SelectItem>
+                        <SelectItem value="year">This Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-                  <p className="text-gray-500">Budget Chart Coming Soon</p>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={budgetData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fill: "#6B7280" }}
+                        axisLine={{ stroke: "#E5E7EB" }}
+                      />
+                      <YAxis
+                        tick={{ fill: "#6B7280" }}
+                        axisLine={{ stroke: "#E5E7EB" }}
+                        tickFormatter={(value) => `$${value}B`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "white",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "0.5rem",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                        formatter={(value) => [`$${value}B`, ""]}
+                      />
+                      <Bar
+                        dataKey="allocated"
+                        fill="#000000"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={40}
+                      />
+                      <Bar
+                        dataKey="spent"
+                        fill="#9CA3AF"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={40}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                  {[
+                    {
+                      label: "Total Allocated",
+                      value: "$531.4B",
+                      change: "+2.3%",
+                      trend: "up",
+                    },
+                    {
+                      label: "Total Spent",
+                      value: "$507.2B",
+                      change: "+1.8%",
+                      trend: "up",
+                    },
+                    {
+                      label: "Efficiency Rate",
+                      value: "95.4%",
+                      change: "+0.5%",
+                      trend: "up",
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                    >
+                      <p className="text-sm text-gray-500">{stat.label}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-lg font-semibold text-gray-900">
+                          {stat.value}
+                        </p>
+                        <span
+                          className={`text-xs font-medium ${
+                            stat.trend === "up"
+                              ? "text-emerald-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {stat.change}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -301,13 +425,13 @@ export default function DepartmentDashboard({
                 >
                   Quick Actions
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3">
                   {[
                     {
                       name: "Create New Proposal",
                       icon: (
                         <svg
-                          className="w-4 h-4"
+                          className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -321,13 +445,12 @@ export default function DepartmentDashboard({
                         </svg>
                       ),
                       action: () => setShowNewProposal(true),
-                      color: "text-blue-600 hover:bg-blue-50 border-blue-100",
                     },
                     {
                       name: "Review Requests",
                       icon: (
                         <svg
-                          className="w-4 h-4"
+                          className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -342,14 +465,12 @@ export default function DepartmentDashboard({
                       ),
                       action: () =>
                         router.push(`/dashboard/${params.department}/requests`),
-                      color:
-                        "text-yellow-600 hover:bg-yellow-50 border-yellow-100",
                     },
                     {
                       name: "Generate Report",
                       icon: (
                         <svg
-                          className="w-4 h-4"
+                          className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -364,14 +485,12 @@ export default function DepartmentDashboard({
                       ),
                       action: () =>
                         router.push(`/dashboard/${params.department}/reports`),
-                      color:
-                        "text-emerald-600 hover:bg-emerald-50 border-emerald-100",
                     },
                     {
                       name: "Update Budget",
                       icon: (
                         <svg
-                          className="w-4 h-4"
+                          className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -385,16 +504,38 @@ export default function DepartmentDashboard({
                         </svg>
                       ),
                       action: () => setShowBudgetUpdate(true),
-                      color:
-                        "text-purple-600 hover:bg-purple-50 border-purple-100",
+                    },
+                    {
+                      name: "Process Transaction",
+                      icon: (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                          />
+                        </svg>
+                      ),
+                      action: () =>
+                        router.push(
+                          `/dashboard/${params.department}/process-transaction`
+                        ),
                     },
                   ].map((action) => (
                     <button
                       key={action.name}
                       onClick={action.action}
-                      className={`flex items-center gap-3 p-4 text-sm font-medium border rounded-lg transition-all duration-300 ${action.color}`}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all duration-300"
                     >
-                      {action.icon}
+                      <span className="p-1.5 rounded-md bg-gray-50">
+                        {action.icon}
+                      </span>
                       {action.name}
                     </button>
                   ))}
@@ -563,7 +704,7 @@ export default function DepartmentDashboard({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  className="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -644,18 +785,24 @@ export default function DepartmentDashboard({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category
                 </label>
-                <select
+                <Select
                   value={budgetForm.category}
-                  onChange={(e) =>
-                    setBudgetForm({ ...budgetForm, category: e.target.value })
+                  onValueChange={(value) =>
+                    setBudgetForm({ ...budgetForm, category: value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="operational">Operational</option>
-                  <option value="development">Development</option>
-                  <option value="research">Research</option>
-                  <option value="infrastructure">Infrastructure</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="operational">Operational</SelectItem>
+                    <SelectItem value="development">Development</SelectItem>
+                    <SelectItem value="research">Research</SelectItem>
+                    <SelectItem value="infrastructure">
+                      Infrastructure
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -681,7 +828,7 @@ export default function DepartmentDashboard({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  className="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-all duration-300"
                 >
                   Update Budget
                 </button>
