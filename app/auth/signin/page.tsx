@@ -5,12 +5,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
 export default function SignIn() {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("department");
 
   const handleMetaMaskConnect = async () => {
     setIsConnecting(true);
@@ -18,8 +26,12 @@ export default function SignIn() {
       // Simulate connection delay
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // For now, just redirect to a demo department dashboard
-      router.push("/dashboard/department-of-defense");
+      // Route based on selected role
+      if (selectedRole === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/dashboard/department-of-defense");
+      }
     } catch (error) {
       console.error("Failed to connect:", error);
     } finally {
@@ -38,41 +50,71 @@ export default function SignIn() {
           </span>
         </Link>
         <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-          Department Sign In
+          Sign In
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Connect your wallet to access your department dashboard
+          Connect your wallet to access your dashboard
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <div className="space-y-6">
-            {/* Department Selection */}
+            {/* Role Selection */}
             <div>
               <label
-                htmlFor="department"
-                className="block text-sm font-medium text-gray-700"
+                htmlFor="role"
+                className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Department
+                Role
               </label>
-              <select
-                id="department"
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              <Select
+                value={selectedRole}
+                onValueChange={(value) => setSelectedRole(value)}
               >
-                <option>Department of Defense</option>
-                <option>NASA</option>
-                <option>Department of Education</option>
-                <option>Department of Health & Human Services</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="department">Department Head</SelectItem>
+                  <SelectItem value="admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Department Selection - Only show for department role */}
+            {selectedRole === "department" && (
+              <div>
+                <label
+                  htmlFor="department"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Department
+                </label>
+                <Select defaultValue="dod">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dod">Department of Defense</SelectItem>
+                    <SelectItem value="nasa">NASA</SelectItem>
+                    <SelectItem value="education">
+                      Department of Education
+                    </SelectItem>
+                    <SelectItem value="health">
+                      Department of Health & Human Services
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* MetaMask Connect Button */}
             <div>
               <button
                 onClick={handleMetaMaskConnect}
                 disabled={isConnecting}
-                className="w-full flex justify-center items-center gap-3 px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex justify-center items-center gap-3 px-4 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300"
               >
                 <Image
                   src="/images/metamask-fox.svg"
@@ -109,8 +151,8 @@ export default function SignIn() {
                   <div className="mt-2 text-sm text-blue-700">
                     <p>
                       You need to have a registered wallet address to access
-                      your department dashboard. Please contact your
-                      administrator if you haven't been registered yet.
+                      your dashboard. Please contact your administrator if you
+                      haven't been registered yet.
                     </p>
                   </div>
                 </div>

@@ -59,6 +59,8 @@ export default function AddDepartment() {
       // Get current user address and make them super admin
       const address = await signer.getAddress();
 
+      console.log(address);
+
       // Since this is testnet, we'll make the first connected user a super admin
       try {
         await departmentSystem.addSuperAdmin(address);
