@@ -1,27 +1,26 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
-module.exports = buildModule("DepartmentSystem", async (m) => {
+module.exports = buildModule("DepartmentSystem", (m) => {
   // Deploy DepartmentRegistry first
   const departmentRegistry = m.contract("DepartmentRegistry");
 
-  // Deploy ProposalManager with DepartmentRegistry address
-  const proposalManager = m.contract("ProposalManager", [
-    m.getAddress(departmentRegistry),
-  ]);
+  // Deploy other contracts
+  const proposalManager = m.contract("ProposalManager", [departmentRegistry]);
+  const budgetController = m.contract("BudgetController", [departmentRegistry]);
 
-  // Deploy BudgetController with DepartmentRegistry address
-  const budgetController = m.contract("BudgetController", [
-    m.getAddress(departmentRegistry),
-  ]);
+  // Add contracts as super admins
+  m.call(departmentRegistry, "addSuperAdmin", [budgetController], {
+    id: "addBudgetControllerAsSuperAdmin",
+  });
 
-  // Add initialization steps
-  const deployer = await m.getDeployer();
+  m.call(departmentRegistry, "addSuperAdmin", [proposalManager], {
+    id: "addProposalManagerAsSuperAdmin",
+  });
 
-  // Add BudgetController as super admin in DepartmentRegistry
-  m.call(departmentRegistry, "addSuperAdmin", [m.getAddress(budgetController)]);
-
-  // Add ProposalManager as super admin in DepartmentRegistry
-  m.call(departmentRegistry, "addSuperAdmin", [m.getAddress(proposalManager)]);
+  // Verify deployer is super admin
+  m.call(departmentRegistry, "isSuperAdmin", [m.deployer], {
+    id: "verifySuperAdmin",
+  });
 
   return {
     departmentRegistry,
