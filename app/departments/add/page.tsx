@@ -2,7 +2,7 @@
 
 import { Space_Grotesk } from "next/font/google";
 import { Header } from "@/app/components/Header";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
 import {
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DepartmentSystemActions } from "@/lib/contracts/actions";
 import { setupNetwork } from "@/lib/contracts/network";
+import { useDropzone } from "react-dropzone";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
@@ -37,6 +38,45 @@ export default function AddDepartment() {
     description: "",
     initialBudget: "",
     walletAddress: "",
+  });
+
+  const uploadToIPFS = async (file: File): Promise<string> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!data.url) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      console.log(data.url);
+      // Return the Cloudinary URL
+      return data.url;
+    } catch (error) {
+      console.error("Failed to upload logo:", error);
+      throw new Error("Failed to upload logo");
+    }
+  };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      setForm((prev) => ({ ...prev, logo: acceptedFiles[0] }));
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/*": [".jpeg", ".jpg", ".png", ".gif"],
+    },
+    maxSize: 5242880, // 5MB
+    multiple: false,
   });
 
   const handleSubmit = async (e: FormEvent) => {
@@ -74,12 +114,24 @@ export default function AddDepartment() {
         form.initialBudget
       );
 
-      // Register department
+      let logoUri = "";
+      if (form.logo) {
+        try {
+          logoUri = await uploadToIPFS(form.logo);
+        } catch (error) {
+          setError("Failed to upload logo. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Register department with logo
       const tx = await departmentSystem.registerDepartment(
         form.walletAddress,
         form.name,
         budgetInWei,
-        form.walletAddress
+        form.walletAddress,
+        logoUri
       );
 
       await tx;
@@ -158,6 +210,54 @@ export default function AddDepartment() {
                     placeholder="0x..."
                     required
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Department Logo</Label>
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
+                      ${
+                        isDragActive
+                          ? "border-black bg-gray-50"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                  >
+                    <input {...getInputProps()} />
+                    {form.logo ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <img
+                          src={URL.createObjectURL(form.logo)}
+                          alt="Preview"
+                          className="w-32 h-32 object-cover rounded-lg"
+                        />
+                        <p className="text-sm text-gray-600">
+                          Click or drag to replace
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <svg
+                          className="w-12 h-12 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <p className="text-sm text-gray-600">
+                          {isDragActive
+                            ? "Drop the logo here"
+                            : "Click or drag logo to upload (max 5MB)"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {error && (
