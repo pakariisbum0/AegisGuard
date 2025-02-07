@@ -41,8 +41,8 @@
       ]
     },
     "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/DepartmentRegistry.sol": {
-      "lastModificationDate": 1738929388830,
-      "contentHash": "28eed341faa5baebd56d0084ec693d80",
+      "lastModificationDate": 1738935109718,
+      "contentHash": "864ff8e73b92c59b7102b1c23cde828b",
       "sourceName": "contracts/DepartmentRegistry.sol",
       "solcConfig": {
         "version": "0.8.28",
