@@ -82,6 +82,25 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "department",
+          "type": "address"
+        }
+      ],
+      "name": "getDepartmentBudget",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "departmentAddress",
           "type": "address"
         }
@@ -138,6 +157,25 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "department",
+          "type": "address"
+        }
+      ],
+      "name": "isDepartmentActive",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "",
           "type": "address"
         }
@@ -151,6 +189,24 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "department",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newBudget",
+          "type": "uint256"
+        }
+      ],
+      "name": "updateDepartmentBudget",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

@@ -4,7 +4,7 @@ import { Space_Grotesk } from "next/font/google";
 import { Header } from "@/app/components/Header";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   BarChart,
@@ -22,50 +22,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UpdateBudgetModal } from "@/app/components/UpdateBudgetModal";
+import {
+  DepartmentSystemActions,
+  DepartmentDetails,
+} from "@/lib/contracts/actions";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  Wallet,
+  BarChart3,
+  RefreshCcw,
+} from "lucide-react";
+// import { useToast } from "@/components/ui/use-toast";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
-
-// Mock data - this would come from your API/database
-const departmentData = {
-  "department-of-defense": {
-    name: "Department of Defense",
-    budget: "$773.1B",
-    projects: "21,345",
-    utilization: "98.2%",
-    logo: "/images/dod-logo.png",
-    address: "0x1234...5678",
-    recentActivity: [
-      {
-        type: "Budget Allocation",
-        amount: "$50M",
-        date: "2024-03-15",
-        status: "Completed",
-        txHash: "0x1234...5678",
-      },
-      {
-        type: "Project Funding",
-        amount: "$25M",
-        date: "2024-03-14",
-        status: "Pending",
-        txHash: "0x8765...4321",
-      },
-    ],
-    activeProposals: [
-      {
-        title: "Cybersecurity Enhancement",
-        amount: "$50M",
-        status: "Under Review",
-        submittedDate: "2024-03-10",
-      },
-      {
-        title: "AI Defense Systems",
-        amount: "$75M",
-        status: "Pending",
-        submittedDate: "2024-03-08",
-      },
-    ],
-  },
-};
 
 // Add form state types
 interface ProposalForm {
@@ -92,12 +68,54 @@ const budgetData = [
   { month: "Aug", allocated: 68.3, spent: 64.8 },
 ];
 
+// Add this type definition
+interface ActivityItem {
+  type: string;
+  date: string;
+  status: "Completed" | "Pending";
+  txHash: string;
+  amount: string;
+  category?: "transfer" | "budget" | "proposal";
+  from?: string;
+  to?: string;
+}
+
+// Create a helper function to determine activity icon and color
+const getActivityStyles = (activity: ActivityItem) => {
+  const styles = {
+    transfer: {
+      icon: activity.type.toLowerCase().includes("incoming") ? (
+        <ArrowDownRight size={18} />
+      ) : (
+        <ArrowUpRight size={18} />
+      ),
+      bgColor: activity.type.toLowerCase().includes("incoming")
+        ? "bg-emerald-50 text-emerald-600"
+        : "bg-blue-50 text-blue-600",
+    },
+    budget: {
+      icon: <BarChart3 size={18} />,
+      bgColor: "bg-purple-50 text-purple-600",
+    },
+    proposal: {
+      icon: <RefreshCcw size={18} />,
+      bgColor: "bg-amber-50 text-amber-600",
+    },
+  };
+
+  return styles[activity.category || "transfer"];
+};
+
 export default function DepartmentDashboard({
   params,
 }: {
   params: { department: string };
 }) {
-  const department = departmentData[params.department];
+  const { toast } = useToast();
+  const [departmentData, setDepartmentData] =
+    useState<DepartmentDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const [showNewProposal, setShowNewProposal] = useState(false);
   const [showBudgetUpdate, setShowBudgetUpdate] = useState(false);
@@ -113,9 +131,70 @@ export default function DepartmentDashboard({
     category: "operational",
   });
   const [formErrors, setFormErrors] = useState<Partial<ProposalForm>>({});
+  const [isUpdateBudgetModalOpen, setIsUpdateBudgetModalOpen] = useState(false);
 
-  if (!department) {
-    return <div>Department not found</div>;
+  useEffect(() => {
+    const fetchDepartmentDetails = async () => {
+      try {
+        setLoading(true);
+        const { provider, signer } =
+          await DepartmentSystemActions.connectWallet();
+        const departmentSystem = new DepartmentSystemActions(provider, signer);
+        const details = await departmentSystem.getDepartmentDetailsBySlug(
+          params.department
+        );
+        setDepartmentData(details);
+      } catch (err) {
+        console.error("Failed to fetch department details:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch department details"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDepartmentDetails();
+  }, [params.department]);
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <main className="pt-16 bg-gray-50 min-h-screen">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="animate-pulse">
+              {/* Add loading skeleton here */}
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !departmentData) {
+    return (
+      <>
+        <Header />
+        <main className="pt-16 bg-gray-50 min-h-screen">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {error || "Department not found"}
+              </h2>
+              <button
+                onClick={() => router.push("/departments")}
+                className="mt-4 text-blue-600 hover:text-blue-800"
+              >
+                ← Back to Departments
+              </button>
+            </div>
+          </div>
+        </main>
+      </>
+    );
   }
 
   // Add validation function
@@ -158,6 +237,179 @@ export default function DepartmentDashboard({
     }
   };
 
+  const handleUpdateBudget = () => {
+    setIsUpdateBudgetModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsUpdateBudgetModalOpen(false);
+  };
+
+  // Add this function to handle successful budget updates
+  const handleBudgetUpdateSuccess = async () => {
+    handleCloseModal();
+    try {
+      const { provider, signer } =
+        await DepartmentSystemActions.connectWallet();
+      const departmentSystem = new DepartmentSystemActions(provider, signer);
+      const details = await departmentSystem.getDepartmentDetailsBySlug(
+        params.department
+      );
+      setDepartmentData(details);
+
+      toast({
+        title: "Budget Updated",
+        description: "Department budget has been successfully updated.",
+        variant: "default",
+        duration: 5000,
+      });
+    } catch (err) {
+      console.error("Failed to refresh department details:", err);
+      // Since the update likely succeeded but refresh failed
+      toast({
+        title: "Budget Updated",
+        description:
+          "Budget updated successfully. Please refresh to see the latest changes.",
+        variant: "default", // Keep default since it's still a success case
+        duration: 5000,
+      });
+    }
+  };
+
+  // Update the Recent Activity section in the component
+  const RecentActivity = () => {
+    return (
+      <div className="bg-white rounded-xl p-6 border border-gray-100 max-w-full overflow-hidden">
+        <div className="flex justify-between items-center mb-6">
+          <h2
+            className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+          >
+            Recent Activity
+          </h2>
+          <div className="flex items-center gap-3 text-sm text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+              Completed
+            </span>
+            <span className="w-px h-4 bg-gray-200" />
+            <span className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+              Pending
+            </span>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {departmentData.recentActivity?.map((activity: ActivityItem, i) => {
+            const styles = getActivityStyles(activity);
+
+            return (
+              <div
+                key={i}
+                className="group p-4 hover:bg-gray-50 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200"
+              >
+                <div className="flex items-start gap-4">
+                  {/* Icon Column */}
+                  <div
+                    className={`p-2 rounded-full shrink-0 ${styles.bgColor}`}
+                  >
+                    {styles.icon}
+                  </div>
+
+                  {/* Content Column */}
+                  <div className="flex-1 min-w-0">
+                    {/* Title and Status Row */}
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <h3 className="font-medium text-gray-900 truncate">
+                        {activity.type}
+                      </h3>
+                      <span
+                        className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
+                          activity.status === "Completed"
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-yellow-50 text-yellow-600"
+                        }`}
+                      >
+                        {activity.status === "Completed" ? (
+                          <CheckCircle2 size={12} />
+                        ) : (
+                          <AlertCircle size={12} />
+                        )}
+                        {activity.status}
+                      </span>
+                    </div>
+
+                    {/* Amount Row */}
+                    <div className="text-sm font-medium text-gray-900 mb-1.5">
+                      {activity.amount}
+                    </div>
+
+                    {/* Wallet Info Row */}
+                    {(activity.from || activity.to) && (
+                      <div className="flex items-center gap-2 mb-1.5 text-sm text-gray-500">
+                        <Wallet size={14} className="shrink-0" />
+                        <span className="truncate">
+                          {activity.from && (
+                            <span className="inline-flex items-center gap-1">
+                              From: {activity.from.slice(0, 6)}...
+                              {activity.from.slice(-4)}
+                            </span>
+                          )}
+                          {activity.to && (
+                            <span className="inline-flex items-center gap-1">
+                              {activity.from && " • "}
+                              To: {activity.to.slice(0, 6)}...
+                              {activity.to.slice(-4)}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Transaction Info Row */}
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={14} className="shrink-0" />
+                        <span>{activity.date}</span>
+                      </div>
+                      <span className="w-1 h-1 rounded-full bg-gray-300" />
+                      <a
+                        href={`https://etherscan.io/tx/${activity.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 hover:text-gray-700 transition-colors group-hover:underline"
+                      >
+                        <span className="truncate">
+                          {activity.txHash.slice(0, 6)}...
+                          {activity.txHash.slice(-4)}
+                        </span>
+                        <ExternalLink
+                          size={12}
+                          className="shrink-0 opacity-50 group-hover:opacity-100"
+                        />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }) || (
+            <div className="text-center py-12 px-4">
+              <div className="bg-gray-50 rounded-full w-12 h-12 mx-auto flex items-center justify-center mb-4">
+                <Clock className="w-6 h-6 text-gray-400" />
+              </div>
+              <h3 className="text-sm font-medium text-gray-900 mb-1">
+                No Recent Activity
+              </h3>
+              <p className="text-sm text-gray-500">
+                New transactions and updates will appear here
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <Header />
@@ -169,8 +421,8 @@ export default function DepartmentDashboard({
               <div className="flex items-center gap-6">
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                   <Image
-                    src={department.logo}
-                    alt={department.name}
+                    src={departmentData.logo}
+                    alt={departmentData.name}
                     width={64}
                     height={64}
                     className="rounded-lg"
@@ -180,10 +432,10 @@ export default function DepartmentDashboard({
                   <h1
                     className={`text-3xl font-bold text-gray-900 ${spaceGrotesk.className}`}
                   >
-                    {department.name}
+                    {departmentData.name}
                   </h1>
                   <p className="text-gray-500 flex items-center gap-2">
-                    Connected as: {department.address}
+                    Connected as: {departmentData.address}
                     <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
                   </p>
                 </div>
@@ -236,12 +488,19 @@ export default function DepartmentDashboard({
           {/* Quick Stats */}
           <div className="grid grid-cols-4 gap-6 mb-12">
             {[
-              { label: "Total Budget", value: department.budget },
-              { label: "Active Projects", value: department.projects },
-              { label: "Budget Utilized", value: department.utilization },
+              { label: "Total Budget", value: departmentData.budget.usd },
+              {
+                label: "Active Projects",
+                value: departmentData.projects.toString(),
+              },
+              { label: "Budget Utilized", value: departmentData.utilization },
               {
                 label: "Pending Proposals",
-                value: department.activeProposals.length.toString(),
+                value: (
+                  departmentData.activeProposals?.filter((p) =>
+                    ["pending", "review"].includes(p.status.toLowerCase())
+                  )?.length || 0
+                ).toString(),
               },
             ].map((stat) => (
               <div
@@ -386,7 +645,7 @@ export default function DepartmentDashboard({
                   </button>
                 </div>
                 <div className="space-y-4">
-                  {department.activeProposals.map((project, i) => (
+                  {departmentData.activeProposals?.map((project, i) => (
                     <div
                       key={i}
                       className="p-4 border border-gray-100 rounded-lg hover:border-gray-200"
@@ -411,7 +670,7 @@ export default function DepartmentDashboard({
                         </span>
                       </div>
                     </div>
-                  ))}
+                  )) || <p className="text-gray-500">No active projects</p>}
                 </div>
               </div>
             </div>
@@ -428,7 +687,45 @@ export default function DepartmentDashboard({
                 <div className="space-y-3">
                   {[
                     {
-                      name: "Create New Proposal",
+                      name: "New Project",
+                      icon: (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4v16m8-8H4"
+                          />
+                        </svg>
+                      ),
+                      action: () => console.log("New project"),
+                    },
+                    {
+                      name: "Update Budget",
+                      icon: (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      ),
+                      action: handleUpdateBudget,
+                    },
+                    {
+                      name: "New Proposal",
                       icon: (
                         <svg
                           className="w-5 h-5"
@@ -487,25 +784,6 @@ export default function DepartmentDashboard({
                         router.push(`/dashboard/${params.department}/reports`),
                     },
                     {
-                      name: "Update Budget",
-                      icon: (
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      ),
-                      action: () => setShowBudgetUpdate(true),
-                    },
-                    {
                       name: "Process Transaction",
                       icon: (
                         <svg
@@ -543,49 +821,7 @@ export default function DepartmentDashboard({
               </div>
 
               {/* Recent Activity */}
-              <div className="bg-white rounded-xl p-6 border border-gray-100">
-                <h2
-                  className={`text-xl font-bold text-gray-900 mb-6 ${spaceGrotesk.className}`}
-                >
-                  Recent Activity
-                </h2>
-                <div className="space-y-4">
-                  {department.recentActivity.map((activity, i) => (
-                    <div
-                      key={i}
-                      className="p-3 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {activity.type}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {activity.date}
-                          </p>
-                        </div>
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            activity.status === "Completed"
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-yellow-50 text-yellow-600"
-                          }`}
-                        >
-                          {activity.status}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex justify-between items-center text-sm">
-                        <span className="text-gray-500">
-                          Tx: {activity.txHash}
-                        </span>
-                        <span className="font-medium text-gray-900">
-                          {activity.amount}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <RecentActivity />
             </div>
           </div>
         </div>
@@ -836,6 +1072,18 @@ export default function DepartmentDashboard({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Add Update Budget Modal */}
+      {departmentData && (
+        <UpdateBudgetModal
+          isOpen={isUpdateBudgetModalOpen}
+          onClose={handleCloseModal}
+          departmentAddress={departmentData.departmentHead}
+          departmentName={departmentData.name}
+          currentBudget={departmentData.budget.eth}
+          onSuccess={handleBudgetUpdateSuccess}
+        />
       )}
     </>
   );

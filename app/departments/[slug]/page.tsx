@@ -1,99 +1,157 @@
+"use client";
+
 import { Space_Grotesk } from "next/font/google";
 import Image from "next/image";
 import { Header } from "@/app/components/Header";
+import { useState, useEffect } from "react";
+import {
+  DepartmentSystemActions,
+  DepartmentDetails,
+} from "@/lib/contracts/actions";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
-// This would typically come from your API/database
-const departmentData = {
-  "department-of-defense": {
-    name: "Department of Defense",
-    budget: "$773.1B",
-    projects: "21,345",
-    utilization: "98.2%",
-    logo: "/images/dod-logo.png",
-    transactions: [
-      {
-        description: "Military Equipment Purchase",
-        amount: "$2.5M",
-        date: "2024-03-15",
-        status: "Completed",
-      },
-      {
-        description: "Training Program",
-        amount: "$1.2M",
-        date: "2024-03-14",
-        status: "In Progress",
-      },
-    ],
-    proposals: [
-      {
-        title: "Cybersecurity Enhancement",
-        amount: "$50M",
-        status: "Under Review",
-        submittedDate: "2024-03-10",
-      },
-      {
-        title: "AI Defense Systems",
-        amount: "$75M",
-        status: "Pending",
-        submittedDate: "2024-03-08",
-      },
-    ],
-  },
-  nasa: {
-    name: "NASA",
-    budget: "$24.5B",
-    projects: "12,458",
-    utilization: "94.2%",
-    logo: "/images/nasa.png",
-    transactions: [
-      {
-        description: "Satellite Launch",
-        amount: "$15M",
-        date: "2024-03-15",
-        status: "Completed",
-      },
-      {
-        description: "Research Equipment",
-        amount: "$3.2M",
-        date: "2024-03-13",
-        status: "In Progress",
-      },
-    ],
-    proposals: [
-      {
-        title: "Mars Mission Planning",
-        amount: "$120M",
-        status: "Under Review",
-        submittedDate: "2024-03-12",
-      },
-      {
-        title: "Space Station Upgrades",
-        amount: "$85M",
-        status: "Approved",
-        submittedDate: "2024-03-05",
-      },
-    ],
-  },
-  // Add more departments...
-};
+// Add this interface for our quick actions
+interface QuickAction {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
+
+// Add this skeleton component at the top of the file
+function DepartmentDetailsSkeleton() {
+  return (
+    <>
+      {/* Hero Section Skeleton */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-6">
+              <div className="bg-gray-100 p-4 rounded-xl animate-pulse w-[96px] h-[96px]" />
+              <div className="space-y-2">
+                <div className="h-8 bg-gray-100 rounded w-64 animate-pulse" />
+                <div className="h-4 bg-gray-100 rounded w-32 animate-pulse" />
+              </div>
+            </div>
+            <div className="w-40 h-10 bg-gray-100 rounded-lg animate-pulse" />
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Stats Row Skeleton */}
+        <div className="grid grid-cols-4 gap-6 mb-12">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="bg-white rounded-xl p-6 border border-gray-100"
+            >
+              <div className="h-4 bg-gray-100 rounded w-24 mb-2 animate-pulse" />
+              <div className="h-8 bg-gray-100 rounded w-32 animate-pulse" />
+            </div>
+          ))}
+        </div>
+
+        {/* Main Content Grid Skeleton */}
+        <div className="grid grid-cols-3 gap-8">
+          <div className="col-span-2 space-y-8">
+            {/* Budget Breakdown Skeleton */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100">
+              <div className="h-6 bg-gray-100 rounded w-48 mb-6 animate-pulse" />
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="flex justify-between items-center p-4"
+                  >
+                    <div className="space-y-2">
+                      <div className="h-5 bg-gray-100 rounded w-40 animate-pulse" />
+                      <div className="h-4 bg-gray-100 rounded w-24 animate-pulse" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-5 bg-gray-100 rounded w-24 animate-pulse" />
+                      <div className="h-4 bg-gray-100 rounded w-16 animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column Skeleton */}
+          <div className="space-y-8">
+            <div className="bg-white rounded-xl p-6 border border-gray-100">
+              <div className="h-6 bg-gray-100 rounded w-32 mb-6 animate-pulse" />
+              <div className="space-y-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-4 bg-gray-100 rounded w-full animate-pulse" />
+                    <div className="h-4 bg-gray-100 rounded w-3/4 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default function DepartmentPage({
   params,
 }: {
   params: { slug: string };
 }) {
-  const department = departmentData[params.slug];
+  const [department, setDepartment] = useState<DepartmentDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!department) {
+  useEffect(() => {
+    const fetchDepartmentDetails = async () => {
+      try {
+        const { provider, signer } =
+          await DepartmentSystemActions.connectWallet();
+        const departmentSystem = new DepartmentSystemActions(provider, signer);
+        const details = await departmentSystem.getDepartmentDetailsBySlug(
+          params.slug
+        );
+        setDepartment(details);
+      } catch (err) {
+        console.error("Failed to fetch department details:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch department details"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDepartmentDetails();
+  }, [params.slug]);
+
+  // Update the loading state to use the skeleton
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <main className="pt-16 bg-gray-50">
+          <DepartmentDetailsSkeleton />
+        </main>
+      </>
+    );
+  }
+
+  if (error || !department) {
     return (
       <>
         <Header />
         <main className="pt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <h1 className="text-2xl font-bold text-gray-900">
-              Department not found
+              {error || "Department not found"}
             </h1>
           </div>
         </main>
@@ -108,23 +166,25 @@ export default function DepartmentPage({
         {/* Hero Section with Department Info */}
         <div className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-center gap-6">
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <Image
-                  src={department.logo}
-                  alt={department.name}
-                  width={64}
-                  height={64}
-                  className="rounded-lg"
-                />
-              </div>
-              <div>
-                <h1
-                  className={`text-3xl font-bold text-gray-900 ${spaceGrotesk.className}`}
-                >
-                  {department.name}
-                </h1>
-                <p className="text-gray-500">Fiscal Year 2024</p>
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-6">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <Image
+                    src={department.logo}
+                    alt={department.name}
+                    width={64}
+                    height={64}
+                    className="rounded-lg"
+                  />
+                </div>
+                <div>
+                  <h1
+                    className={`text-3xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+                  >
+                    {department.name}
+                  </h1>
+                  <p className="text-gray-500">Fiscal Year 2025</p>
+                </div>
               </div>
             </div>
           </div>
@@ -134,7 +194,7 @@ export default function DepartmentPage({
           {/* Quick Stats Row */}
           <div className="grid grid-cols-4 gap-6 mb-12">
             {[
-              { label: "Total Budget", value: department.budget },
+              { label: "Total Budget", value: department.budget.usd },
               { label: "Active Projects", value: department.projects },
               { label: "Budget Utilized", value: department.utilization },
               {
