@@ -104,25 +104,12 @@ export interface Transaction {
   to?: string;
 }
 
-// Add this interface to match the contract's transaction functions
-// interface IBudgetController {
-//   createTransaction(
-//     txType: number,
-//     amount: bigint,
-//     description: string
-//   ): Promise<ethers.ContractTransactionResponse>;
-//   getTransactionsByDepartment(department: string): Promise<
-//     Array<{
-//       id: bigint;
-//       department: string;
-//       txType: number;
-//       amount: bigint;
-//       description: string;
-//       status: number;
-//       timestamp: bigint;
-//     }>
-//   >;
-// }
+// Add this interface
+interface MonthlyBudget {
+  timestamp: number;
+  allocated: number;
+  spent: number;
+}
 
 export class DepartmentSystemActions {
   private provider: ethers.Provider;
@@ -294,7 +281,33 @@ export class DepartmentSystemActions {
   }
 
   async getProposalsByDepartment(department: string) {
-    return this.proposalManager.getProposalsByDepartment(department);
+    try {
+      console.log("=== Getting Department Proposals ===");
+      console.log("Department Address:", department);
+
+      const proposals = await this.proposalManager.getProposalsByDepartment(
+        department
+      );
+      console.log("Raw proposals from contract:", proposals);
+
+      // Map and filter the proposals
+      const mappedProposals = proposals.map((p: any) => ({
+        id: p.id.toString(),
+        title: p.title,
+        amount: ethers.formatEther(p.amount),
+        status: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][
+          Number(p.status)
+        ],
+        description: p.description,
+        submittedDate: new Date(Number(p.timestamp) * 1000).toISOString(),
+      }));
+
+      console.log("Mapped proposals:", mappedProposals);
+      return mappedProposals;
+    } catch (error) {
+      console.error("Failed to get proposals:", error);
+      throw error;
+    }
   }
 
   async addProposalComment(proposalId: number, comment: string) {
@@ -485,8 +498,6 @@ export class DepartmentSystemActions {
     try {
       const rate = await this.getEthToUsdRate();
       const usdAmount = parseFloat(ethAmount) * rate;
-
-      // Format with proper currency notation
       return new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
@@ -750,10 +761,27 @@ export class DepartmentSystemActions {
 
   async getPendingTransactions(department: string): Promise<Transaction[]> {
     try {
+      console.log("=== Getting Pending Transactions ===");
+      console.log("Department Address:", department);
+
       const transactions =
         await this.budgetController.getTransactionsByDepartment(department);
-      return transactions
-        .filter((tx: any) => tx.status === 0) // Filter PENDING transactions
+      console.log("Raw transactions from contract:", transactions);
+
+      // Log the TransactionStatus enum values
+      console.log("TransactionStatus.PENDING =", TransactionStatus.PENDING);
+
+      const pending = transactions
+        .filter((tx: any) => {
+          console.log(
+            "Transaction status:",
+            tx.status,
+            "Type:",
+            typeof tx.status
+          );
+          // Check if the transaction is pending (status should be 0)
+          return Number(tx.status) === 0;
+        })
         .map((tx: any) => ({
           id: tx.id.toString(),
           department: tx.department,
@@ -763,8 +791,11 @@ export class DepartmentSystemActions {
           status: TransactionStatus[tx.status],
           timestamp: new Date(Number(tx.timestamp) * 1000).toISOString(),
           from: tx.department,
-          to: tx.department, // In real implementation, this would be the recipient
+          to: tx.department,
         }));
+
+      console.log("Filtered pending transactions:", pending);
+      return pending;
     } catch (error) {
       console.error("Failed to get pending transactions:", error);
       throw error;
@@ -837,6 +868,63 @@ export class DepartmentSystemActions {
         error instanceof Error ? error.message : "Unknown error occurred"
       );
     }
+  }
+
+  // Add this method to the DepartmentSystemActions class
+  async getMonthlyBudgetData(
+    departmentAddress: string,
+    months: number
+  ): Promise<MonthlyBudget[]> {
+    try {
+      const budgetController = await this.getBudgetController();
+      const currentTime = Math.floor(Date.now() / 1000);
+      const monthInSeconds = 30 * 24 * 60 * 60;
+
+      console.log("Fetching budget data for department:", departmentAddress);
+      console.log("Current time:", new Date(currentTime * 1000).toISOString());
+
+      const monthlyData: MonthlyBudget[] = [];
+
+      for (let i = 0; i < months; i++) {
+        const timestamp = currentTime - i * monthInSeconds;
+        console.log(
+          `Fetching month ${i} data for:`,
+          new Date(timestamp * 1000).toISOString()
+        );
+
+        const [allocated, spent] = await Promise.all([
+          budgetController.getAllocatedBudgetAt(departmentAddress, timestamp),
+          budgetController.getSpentBudgetAt(departmentAddress, timestamp),
+        ]);
+
+        console.log("Raw allocated amount:", allocated.toString());
+        console.log("Raw spent amount:", spent.toString());
+
+        monthlyData.push({
+          timestamp,
+          allocated: Number(allocated),
+          spent: Number(spent),
+        });
+      }
+
+      console.log("Final monthly data:", monthlyData);
+      return monthlyData.reverse();
+    } catch (error) {
+      console.error("Error fetching monthly budget data:", error);
+      throw error;
+    }
+  }
+
+  // Add this method to the DepartmentSystemActions class
+  private async getBudgetController(): Promise<ethers.Contract> {
+    if (!this.budgetController) {
+      this.budgetController = new ethers.Contract(
+        CONTRACT_ADDRESSES.BUDGET_CONTROLLER,
+        BudgetControllerABI.abi,
+        this.signer
+      );
+    }
+    return this.budgetController;
   }
 }
 
