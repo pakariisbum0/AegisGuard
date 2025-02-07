@@ -18,6 +18,10 @@ module.exports = buildModule("DepartmentSystem", (m) => {
     { from: deployer }
   );
 
+  const activityTracker = m.contract("ActivityTracker", [departmentRegistry], {
+    from: deployer,
+  });
+
   m.call(departmentRegistry, "addSuperAdmin", [budgetController], {
     id: "addBudgetControllerAsSuperAdmin",
     from: deployer,
@@ -28,9 +32,15 @@ module.exports = buildModule("DepartmentSystem", (m) => {
     from: deployer,
   });
 
+  m.call(departmentRegistry, "addSuperAdmin", [activityTracker], {
+    id: "addActivityTrackerAsSuperAdmin",
+    from: deployer,
+  });
+
   return {
     departmentRegistry,
     proposalManager,
     budgetController,
+    activityTracker,
   };
 });
