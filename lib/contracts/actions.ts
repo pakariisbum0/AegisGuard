@@ -83,6 +83,17 @@ interface PriceResponse {
   price: number;
 }
 
+// Add these interfaces near other interfaces
+export interface Transaction {
+  id: number;
+  type: "BUDGET_ALLOCATION" | "PROJECT_FUNDING" | "BUDGET_UPDATE" | "EXPENSE";
+  amount: string;
+  description: string;
+  status: "PENDING" | "COMPLETED" | "FAILED";
+  timestamp: number;
+  txHash?: string;
+}
+
 export class DepartmentSystemActions {
   private provider: ethers.Provider;
   private signer: ethers.Signer;
@@ -172,9 +183,34 @@ export class DepartmentSystemActions {
     return tx.wait();
   }
 
-  async processTransaction(transactionId: number) {
-    const tx = await this.budgetController.processTransaction(transactionId);
-    return tx.wait();
+  async processTransaction(
+    transactionId: number,
+    description: string = ""
+  ): Promise<ethers.ContractTransactionResponse> {
+    try {
+      // Get transaction details first
+      const transaction = await this.budgetController.getTransaction(
+        transactionId
+      );
+
+      // Process the transaction
+      const tx = await this.budgetController.processTransaction(transactionId);
+
+      // Log the activity
+      await this.logActivity(
+        transaction.department,
+        `Process Transaction #${transactionId}`,
+        transaction.amount,
+        description || transaction.description,
+        tx.hash,
+        "Completed"
+      );
+
+      return tx;
+    } catch (error) {
+      console.error("Failed to process transaction:", error);
+      throw error;
+    }
   }
 
   async getTransactionsByDepartment(department: string) {
@@ -184,17 +220,27 @@ export class DepartmentSystemActions {
   // Proposal Manager Actions
   async submitProposal(
     title: string,
-    amount: bigint,
+    amount: string,
     description: string,
     category: string
-  ) {
-    const tx = await this.proposalManager.submitProposal(
-      title,
-      amount,
-      description,
-      category
-    );
-    return tx.wait();
+  ): Promise<ethers.ContractTransactionResponse> {
+    try {
+      const amountWei = DepartmentSystemActions.formatAmount(amount);
+      const tx = await this.proposalManager.submitProposal(
+        title,
+        amountWei,
+        JSON.stringify({
+          description,
+          category,
+          timestamp: Date.now(),
+        }),
+        category
+      );
+      return tx;
+    } catch (error) {
+      console.error("Failed to submit proposal:", error);
+      throw error;
+    }
   }
 
   async reviewProposal(proposalId: number, newStatus: ProposalStatus) {
@@ -519,16 +565,16 @@ export class DepartmentSystemActions {
     }
   }
 
-  private async logActivity(
+  async logActivity(
     department: string,
     activityType: string,
     amount: bigint,
     description: string,
     txHash: string,
-    status: string
-  ) {
+    status: "Completed" | "Pending"
+  ): Promise<void> {
     try {
-      await this.activityTracker.logActivity(
+      const tx = await this.activityTracker.logActivity(
         department,
         activityType,
         amount,
@@ -536,8 +582,10 @@ export class DepartmentSystemActions {
         txHash,
         status
       );
+      await tx.wait();
     } catch (error) {
       console.error("Failed to log activity:", error);
+      throw error;
     }
   }
 
@@ -643,6 +691,54 @@ export class DepartmentSystemActions {
     } catch (error) {
       console.error("Failed to fetch recent activities:", error);
       return [];
+    }
+  }
+
+  async getTransactionDetails(transactionId: number): Promise<Transaction> {
+    try {
+      const tx = await this.budgetController.getTransaction(transactionId);
+      return {
+        id: transactionId,
+        type: [
+          "BUDGET_ALLOCATION",
+          "PROJECT_FUNDING",
+          "BUDGET_UPDATE",
+          "EXPENSE",
+        ][tx.txType],
+        amount: ethers.formatEther(tx.amount),
+        description: tx.description,
+        status: ["PENDING", "COMPLETED", "FAILED"][tx.status],
+        timestamp: Number(tx.timestamp),
+        txHash: tx.txHash,
+      };
+    } catch (error) {
+      console.error("Failed to get transaction details:", error);
+      throw error;
+    }
+  }
+
+  async getPendingTransactions(department: string): Promise<Transaction[]> {
+    try {
+      const transactions = await this.budgetController.getPendingTransactions(
+        department
+      );
+      return transactions.map((tx: any, index: number) => ({
+        id: index,
+        type: [
+          "BUDGET_ALLOCATION",
+          "PROJECT_FUNDING",
+          "BUDGET_UPDATE",
+          "EXPENSE",
+        ][tx.txType],
+        amount: ethers.formatEther(tx.amount),
+        description: tx.description,
+        status: ["PENDING", "COMPLETED", "FAILED"][tx.status],
+        timestamp: Number(tx.timestamp),
+        txHash: tx.txHash,
+      }));
+    } catch (error) {
+      console.error("Failed to get pending transactions:", error);
+      throw error;
     }
   }
 }

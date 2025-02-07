@@ -26,6 +26,7 @@ import { UpdateBudgetModal } from "@/app/components/UpdateBudgetModal";
 import {
   DepartmentSystemActions,
   DepartmentDetails,
+  Transaction,
 } from "@/lib/contracts/actions";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -39,6 +40,8 @@ import {
   BarChart3,
   RefreshCcw,
 } from "lucide-react";
+import { ProcessTransactionModal } from "@/app/components/ProcessTransactionModal";
+
 // import { useToast } from "@/components/ui/use-toast";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
@@ -48,6 +51,7 @@ interface ProposalForm {
   title: string;
   amount: string;
   description: string;
+  category: "development" | "research" | "infrastructure" | "operational";
 }
 
 interface BudgetUpdateForm {
@@ -81,13 +85,12 @@ const budgetData = [
 // Add this type definition
 interface ActivityItem {
   type: string;
+  amount: string;
   date: string;
   status: "Completed" | "Pending";
   txHash: string;
-  amount: string;
   category?: "transfer" | "budget" | "proposal";
-  from?: string;
-  to?: string;
+  description?: string;
 }
 
 // Create a helper function to determine activity icon and color
@@ -134,6 +137,7 @@ export default function DepartmentDashboard({
     title: "",
     amount: "",
     description: "",
+    category: "development",
   });
   const [budgetForm, setBudgetForm] = useState<BudgetUpdateForm>({
     amount: "",
@@ -151,6 +155,10 @@ export default function DepartmentDashboard({
     timeline: "",
     objectives: "",
   });
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+  const [isProcessTransactionModalOpen, setIsProcessTransactionModalOpen] =
+    useState(false);
 
   useEffect(() => {
     const fetchDepartmentDetails = async () => {
@@ -217,39 +225,90 @@ export default function DepartmentDashboard({
   }
 
   // Add validation function
-  const validateProposalForm = () => {
-    const errors: Partial<ProposalForm> = {};
-    if (!proposalForm.title.trim()) {
+  const validateProposalForm = (form: ProposalForm) => {
+    const errors: Partial<Record<keyof ProposalForm, string>> = {};
+
+    if (!form.title.trim()) {
       errors.title = "Title is required";
     }
-    if (!proposalForm.amount.trim()) {
+
+    if (!form.amount.trim()) {
       errors.amount = "Amount is required";
-    } else if (!/^\$?\d+(\.\d{1,2})?(M|B|T)?$/.test(proposalForm.amount)) {
-      errors.amount = "Invalid amount format";
+    } else if (!/^\d*\.?\d+$/.test(form.amount)) {
+      errors.amount = "Invalid amount format. Please enter a valid number";
     }
-    if (!proposalForm.description.trim()) {
+
+    if (!form.description.trim()) {
       errors.description = "Description is required";
     }
+
+    if (!form.category) {
+      errors.category = "Category is required";
+    }
+
     return errors;
   };
 
   // Add form submission handler
   const handleProposalSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const errors = validateProposalForm();
+    const errors = validateProposalForm(proposalForm);
     setFormErrors(errors);
 
     if (Object.keys(errors).length === 0) {
       setIsSubmitting(true);
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        // Handle success
+        const { provider, signer } =
+          await DepartmentSystemActions.connectWallet();
+        const departmentSystem = new DepartmentSystemActions(provider, signer);
+
+        // Submit the proposal to the blockchain
+        const tx = await departmentSystem.submitProposal(
+          proposalForm.title,
+          proposalForm.amount,
+          proposalForm.description,
+          proposalForm.category
+        );
+
+        // Log the activity
+        await departmentSystem.logActivity(
+          departmentData.address,
+          "New Proposal",
+          DepartmentSystemActions.formatAmount(proposalForm.amount),
+          proposalForm.description,
+          tx.hash,
+          "Pending"
+        );
+
+        toast({
+          title: "Proposal Submitted",
+          description: "Your proposal has been successfully submitted.",
+          variant: "default",
+        });
+
+        // Reset form and close modal
+        setProposalForm({
+          title: "",
+          amount: "",
+          description: "",
+          category: "development",
+        });
         setShowNewProposal(false);
-        // Reset form
-        setProposalForm({ title: "", amount: "", description: "" });
+
+        // Refresh department data
+        const updatedDetails =
+          await departmentSystem.getDepartmentDetailsBySlug(params.department);
+        setDepartmentData(updatedDetails);
       } catch (error) {
         console.error("Failed to submit proposal:", error);
+        toast({
+          title: "Error",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to submit proposal",
+          variant: "destructive",
+        });
       } finally {
         setIsSubmitting(false);
       }
@@ -486,181 +545,207 @@ export default function DepartmentDashboard({
   };
 
   // Add this modal component near the end of the file
-  const NewProjectModal = () => {
-    // Create separate onChange handlers
-    const handleInputChange =
-      (field: keyof ProjectForm) =>
-      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setProjectForm((prev) => ({
-          ...prev,
-          [field]: e.target.value,
-        }));
-      };
-
-    const handleCategoryChange = (value: ProjectForm["category"]) => {
-      setProjectForm((prev) => ({
-        ...prev,
-        category: value,
-      }));
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2
-              className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+  const NewProjectModal = () => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2
+            className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+          >
+            Create New Project
+          </h2>
+          <button
+            onClick={() => setIsNewProjectModalOpen(false)}
+            className="text-gray-500 hover:text-gray-700"
+            disabled={isSubmitting}
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Create New Project
-            </h2>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <form onSubmit={handleProjectSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Project Title
+            </label>
+            <input
+              type="text"
+              value={projectForm.title}
+              onChange={(e) =>
+                setProjectForm({ ...projectForm, title: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter project title"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <Select
+              value={projectForm.category}
+              onValueChange={(value: ProjectForm["category"]) =>
+                setProjectForm({ ...projectForm, category: value })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="development">Development</SelectItem>
+                <SelectItem value="research">Research</SelectItem>
+                <SelectItem value="infrastructure">Infrastructure</SelectItem>
+                <SelectItem value="operational">Operational</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Amount (ETH)
+            </label>
+            <input
+              type="text"
+              value={projectForm.amount}
+              onChange={(e) =>
+                setProjectForm({ ...projectForm, amount: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter amount in ETH"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Timeline
+            </label>
+            <input
+              type="text"
+              value={projectForm.timeline}
+              onChange={(e) =>
+                setProjectForm({ ...projectForm, timeline: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g., 3 months, Q4 2024"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              value={projectForm.description}
+              onChange={(e) =>
+                setProjectForm({ ...projectForm, description: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
+              placeholder="Enter project description"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Objectives
+            </label>
+            <textarea
+              value={projectForm.objectives}
+              onChange={(e) =>
+                setProjectForm({ ...projectForm, objectives: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
+              placeholder="Enter project objectives"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3 mt-6">
             <button
+              type="button"
               onClick={() => setIsNewProjectModalOpen(false)}
-              className="text-gray-500 hover:text-gray-700"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
               disabled={isSubmitting}
             >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Creating...
+                </>
+              ) : (
+                "Create Project"
+              )}
             </button>
           </div>
-          <form onSubmit={handleProjectSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Project Title
-              </label>
-              <input
-                type="text"
-                value={projectForm.title}
-                onChange={handleInputChange("title")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                placeholder="Enter project title"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
-              <Select
-                value={projectForm.category}
-                onValueChange={handleCategoryChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="development">Development</SelectItem>
-                  <SelectItem value="research">Research</SelectItem>
-                  <SelectItem value="infrastructure">Infrastructure</SelectItem>
-                  <SelectItem value="operational">Operational</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount (ETH)
-              </label>
-              <input
-                type="text"
-                value={projectForm.amount}
-                onChange={handleInputChange("amount")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                placeholder="Enter amount in ETH"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Timeline
-              </label>
-              <input
-                type="text"
-                value={projectForm.timeline}
-                onChange={handleInputChange("timeline")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                placeholder="e.g., 3 months, Q4 2024"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                value={projectForm.description}
-                onChange={handleInputChange("description")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                rows={4}
-                placeholder="Enter project description"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Objectives
-              </label>
-              <textarea
-                value={projectForm.objectives}
-                onChange={handleInputChange("objectives")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                rows={4}
-                placeholder="Enter project objectives"
-                required
-              />
-            </div>
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                type="button"
-                onClick={() => setIsNewProjectModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Creating...
-                  </>
-                ) : (
-                  "Create Project"
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
+        </form>
       </div>
-    );
+    </div>
+  );
+
+  // Add this handler
+  const handleProcessTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsProcessTransactionModalOpen(true);
+  };
+
+  // Add this success handler
+  const handleTransactionProcessed = async () => {
+    try {
+      const { provider, signer } =
+        await DepartmentSystemActions.connectWallet();
+      const departmentSystem = new DepartmentSystemActions(provider, signer);
+      const details = await departmentSystem.getDepartmentDetailsBySlug(
+        params.department
+      );
+      setDepartmentData(details);
+
+      toast({
+        title: "Transaction Processed",
+        description: "The transaction has been successfully processed.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Failed to refresh department details:", error);
+      toast({
+        title: "Transaction Processed",
+        description:
+          "Transaction processed successfully. Please refresh to see the latest changes.",
+        variant: "default",
+      });
+    }
   };
 
   return (
@@ -996,46 +1081,7 @@ export default function DepartmentDashboard({
                       ),
                       action: () => setShowNewProposal(true),
                     },
-                    {
-                      name: "Review Requests",
-                      icon: (
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                          />
-                        </svg>
-                      ),
-                      action: () =>
-                        router.push(`/dashboard/${params.department}/requests`),
-                    },
-                    {
-                      name: "Generate Report",
-                      icon: (
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                      ),
-                      action: () =>
-                        router.push(`/dashboard/${params.department}/reports`),
-                    },
+
                     {
                       name: "Process Transaction",
                       icon: (
@@ -1053,10 +1099,7 @@ export default function DepartmentDashboard({
                           />
                         </svg>
                       ),
-                      action: () =>
-                        router.push(
-                          `/dashboard/${params.department}/process-transaction`
-                        ),
+                      action: () => setIsProcessTransactionModalOpen(true),
                     },
                   ].map((action) => (
                     <button
@@ -1121,7 +1164,7 @@ export default function DepartmentDashboard({
                   onChange={(e) =>
                     setProposalForm({ ...proposalForm, title: e.target.value })
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     formErrors.title ? "border-red-300" : "border-gray-300"
                   }`}
                   placeholder="Enter proposal title"
@@ -1133,9 +1176,44 @@ export default function DepartmentDashboard({
                   </p>
                 )}
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Amount
+                  Category
+                </label>
+                <Select
+                  value={proposalForm.category}
+                  onValueChange={(value: ProposalForm["category"]) =>
+                    setProposalForm({ ...proposalForm, category: value })
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger
+                    className={`w-full ${
+                      formErrors.category ? "border-red-300" : ""
+                    }`}
+                  >
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="development">Development</SelectItem>
+                    <SelectItem value="research">Research</SelectItem>
+                    <SelectItem value="infrastructure">
+                      Infrastructure
+                    </SelectItem>
+                    <SelectItem value="operational">Operational</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formErrors.category && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {formErrors.category}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount (ETH)
                 </label>
                 <input
                   type="text"
@@ -1143,10 +1221,10 @@ export default function DepartmentDashboard({
                   onChange={(e) =>
                     setProposalForm({ ...proposalForm, amount: e.target.value })
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     formErrors.amount ? "border-red-300" : "border-gray-300"
                   }`}
-                  placeholder="Enter amount (e.g., $1.5M)"
+                  placeholder="Enter amount in ETH"
                   disabled={isSubmitting}
                 />
                 {formErrors.amount && (
@@ -1155,6 +1233,7 @@ export default function DepartmentDashboard({
                   </p>
                 )}
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
@@ -1167,7 +1246,7 @@ export default function DepartmentDashboard({
                       description: e.target.value,
                     })
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     formErrors.description
                       ? "border-red-300"
                       : "border-gray-300"
@@ -1182,6 +1261,7 @@ export default function DepartmentDashboard({
                   </p>
                 )}
               </div>
+
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
@@ -1266,7 +1346,7 @@ export default function DepartmentDashboard({
                   onChange={(e) =>
                     setBudgetForm({ ...budgetForm, amount: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter amount"
                 />
               </div>
@@ -1302,7 +1382,7 @@ export default function DepartmentDashboard({
                   onChange={(e) =>
                     setBudgetForm({ ...budgetForm, reason: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={4}
                   placeholder="Enter reason for budget update"
                 />
@@ -1341,6 +1421,16 @@ export default function DepartmentDashboard({
 
       {/* Add New Project Modal */}
       {isNewProjectModalOpen && <NewProjectModal />}
+
+      {/* Add Process Transaction Modal */}
+      {selectedTransaction && (
+        <ProcessTransactionModal
+          isOpen={isProcessTransactionModalOpen}
+          onClose={() => setIsProcessTransactionModalOpen(false)}
+          transaction={selectedTransaction}
+          onSuccess={handleTransactionProcessed}
+        />
+      )}
     </>
   );
 }
