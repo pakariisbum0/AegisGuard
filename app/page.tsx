@@ -17,7 +17,7 @@ const departments = [
     budget: "$1.7T",
     projects: "15,234",
     utilization: "96.8%",
-    logo: "/images/dod-logo.png",
+    logo: "/images/hhs-logo.png",
     bgColor: "bg-[#0071BC]",
   },
   {
@@ -25,7 +25,7 @@ const departments = [
     budget: "$24.5B",
     projects: "12,458",
     utilization: "94.2%",
-    logo: "/images/dod-logo.png",
+    logo: "/images/nasa-logo.png",
     bgColor: "bg-[#1A5DAD]",
   },
   {
@@ -33,7 +33,7 @@ const departments = [
     budget: "$79.8B",
     projects: "8,765",
     utilization: "92.5%",
-    logo: "/images/dod-logo.png",
+    logo: "/images/ed-logo.png",
     bgColor: "bg-[#2E4E87]",
   },
 ];
