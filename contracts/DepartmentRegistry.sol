@@ -15,6 +15,7 @@ contract DepartmentRegistry {
         uint256 projects;
         bool isActive;
         address departmentHead;
+        string logoUri;
     }
 
     mapping(address => Department) public departments;
@@ -53,13 +54,15 @@ contract DepartmentRegistry {
 
     constructor() {
         superAdmins[msg.sender] = true;
+        emit SystemPaused(msg.sender);
     }
 
     function registerDepartment(
         address departmentAddress,
         string memory name,
         uint256 initialBudget,
-        address departmentHead
+        address departmentHead,
+        string memory logoUri
     ) external onlySuperAdmin whenNotPaused {
         require(!departments[departmentAddress].isActive, "Department already exists");
         require(departmentHead != address(0), "Invalid department head");
@@ -73,7 +76,8 @@ contract DepartmentRegistry {
             efficiency: 100,
             projects: 0,
             isActive: true,
-            departmentHead: departmentHead
+            departmentHead: departmentHead,
+            logoUri: logoUri
         });
 
         departmentList.push(departmentAddress);
@@ -177,5 +181,9 @@ contract DepartmentRegistry {
         require(departments[departmentAddress].isActive, "Department not found");
         departments[departmentAddress].isActive = false;
         departmentHeads[departments[departmentAddress].departmentHead] = false;
+    }
+
+    function isSuperAdmin(address account) public view returns (bool) {
+        return superAdmins[account];
     }
 } 
