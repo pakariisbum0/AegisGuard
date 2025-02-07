@@ -1,28 +1,99 @@
+"use client";
+
 import { Space_Grotesk } from "next/font/google";
 import { Header } from "@/app/components/Header";
 import { DepartmentCard } from "@/app/components/DepartmentCard";
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import { DepartmentSystemActions } from "@/lib/contracts/actions";
+import { setupNetwork } from "@/lib/contracts/network";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
-const departments = [
-  {
-    name: "Department of Defense",
-    budget: "$773.1B",
-    projects: "21,345",
-    utilization: "98.2%",
-    logo: "/images/dod-logo.png",
-  },
-  {
-    name: "NASA",
-    budget: "$24.5B",
-    projects: "12,458",
-    utilization: "94.2%",
-    logo: "/images/nasa.png",
-  },
-  // Add more departments...
-];
+interface Department {
+  name: string;
+  budget: string;
+  spent: string;
+  efficiency: string;
+  projects: number;
+  isActive: boolean;
+  departmentHead: string;
+  logoUri: string;
+}
+
+// Add this new component for the skeleton loading state
+function DepartmentCardSkeleton() {
+  return (
+    <div className="bg-white rounded-xl p-6 border border-gray-100">
+      <div className="flex items-center gap-4 mb-6">
+        <div className="bg-gray-100 p-3 rounded-lg animate-pulse w-[56px] h-[56px]" />
+        <div className="h-6 bg-gray-100 rounded w-48 animate-pulse" />
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-3 rounded-lg">
+            <div className="h-4 bg-gray-100 rounded w-16 mb-2 animate-pulse" />
+            <div className="h-6 bg-gray-100 rounded w-20 animate-pulse" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function DepartmentsPage() {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        if (typeof window.ethereum === "undefined") {
+          throw new Error("Please install MetaMask to continue");
+        }
+
+        await setupNetwork();
+        const provider = new ethers.BrowserProvider(window.ethereum as any);
+        const signer = await provider.getSigner();
+        const departmentSystem = new DepartmentSystemActions(provider, signer);
+
+        // Get all department addresses
+        const departmentAddresses = await departmentSystem.getAllDepartments();
+
+        // Fetch details for each department
+        const departmentDetails = await Promise.all(
+          departmentAddresses.map(async (address) => {
+            const details = await departmentSystem.getDepartmentDetails(
+              address
+            );
+            return {
+              name: details.name,
+              budget: ethers.formatEther(details.budget),
+              spent: ethers.formatEther(details.spent),
+              efficiency: `${details.efficiency}%`,
+              projects: Number(details.projects),
+              isActive: details.isActive,
+              departmentHead: details.departmentHead,
+              logoUri: details.logoUri,
+            };
+          })
+        );
+
+        setDepartments(departmentDetails);
+      } catch (err) {
+        console.error("Failed to fetch departments:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch departments"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
   return (
     <>
       <Header />
@@ -49,11 +120,28 @@ export default function DepartmentsPage() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {departments.map((dept, i) => (
-              <DepartmentCard key={i} {...dept} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid md:grid-cols-2 gap-8">
+              {[1, 2, 3, 4].map((i) => (
+                <DepartmentCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="p-4 text-red-600 bg-red-50 rounded-lg">{error}</div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-8">
+              {departments.map((dept, i) => (
+                <DepartmentCard
+                  key={i}
+                  name={dept.name}
+                  budget={`${dept.budget} ETH`}
+                  projects={dept.projects.toString()}
+                  utilization={dept.efficiency}
+                  logo={dept.logoUri || "/images/default-department.png"}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </>
