@@ -20,6 +20,9 @@ interface IDepartmentRegistry {
     function departmentHeads(address) external view returns (bool);
     function superAdmins(address) external view returns (bool);
     function updateDepartmentMetrics(address, uint256, uint256, uint256) external;
+    function isDepartmentActive(address department) external view returns (bool);
+    function getDepartmentBudget(address department) external view returns (uint256);
+    function updateDepartmentBudget(address department, uint256 newBudget) external;
 }
 
 contract BudgetController {
@@ -62,6 +65,7 @@ contract BudgetController {
     );
     event TransactionCompleted(uint256 indexed id, TransactionStatus status);
     event BudgetLimitWarning(address indexed department, uint256 spent, uint256 budget);
+    event BudgetUpdated(address indexed department, uint256 oldBudget, uint256 newBudget, uint256 transactionId);
 
     constructor(address _departmentRegistry) {
         departmentRegistry = IDepartmentRegistry(_departmentRegistry);
@@ -86,13 +90,7 @@ contract BudgetController {
         TransactionType txType,
         uint256 amount,
         string memory description
-    ) external onlyDepartmentHead nonReentrant validateAmount(amount) returns (uint256) {
-        IDepartmentRegistry.Department memory dept = departmentRegistry.getDepartmentDetails(msg.sender);
-        
-        if (txType == TransactionType.EXPENSE) {
-            require(dept.spent + amount <= dept.budget, "Budget exceeded");
-        }
-        
+    ) internal returns (uint256) {
         transactionCount++;
         uint256 transactionId = transactionCount;
         
@@ -102,7 +100,7 @@ contract BudgetController {
             txType: txType,
             amount: amount,
             description: description,
-            status: TransactionStatus.PENDING,
+            status: TransactionStatus.COMPLETED,
             timestamp: block.timestamp
         });
         
@@ -110,6 +108,8 @@ contract BudgetController {
         departmentTransactionCount[msg.sender]++;
         
         emit TransactionCreated(transactionId, msg.sender, txType, amount);
+        emit TransactionCompleted(transactionId, TransactionStatus.COMPLETED);
+        
         return transactionId;
     }
 
@@ -215,5 +215,23 @@ contract BudgetController {
         
         emit TransactionCreated(transactionId, department, TransactionType.BUDGET_ALLOCATION, initialBudget);
         emit TransactionCompleted(transactionId, TransactionStatus.COMPLETED);
+    }
+
+    // Function to update department budget
+    function updateDepartmentBudget(address department, uint256 newBudget) external onlySuperAdmin {
+        require(departmentRegistry.isDepartmentActive(department), "Department is not active");
+        uint256 currentBudget = departmentRegistry.getDepartmentBudget(department);
+        
+        // Create a budget update transaction
+        uint256 transactionId = createTransaction(
+            TransactionType.BUDGET_UPDATE,
+            newBudget > currentBudget ? newBudget - currentBudget : currentBudget - newBudget,
+            "Budget Update"
+        );
+        
+        // Update the budget in DepartmentRegistry
+        departmentRegistry.updateDepartmentBudget(department, newBudget);
+        
+        emit BudgetUpdated(department, currentBudget, newBudget, transactionId);
     }
 } 

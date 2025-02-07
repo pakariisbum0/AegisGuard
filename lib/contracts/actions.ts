@@ -6,9 +6,9 @@ import { setupNetwork } from "@/lib/contracts/network";
 
 // Contract addresses from deployment
 const CONTRACT_ADDRESSES = {
-  DEPARTMENT_REGISTRY: "0xD6060261Df228ACFA52197E449349dbF5443e979",
-  BUDGET_CONTROLLER: "0x27c98C6Bb9Fc79Df5b14419538dAd0594851Ed4f",
-  PROPOSAL_MANAGER: "0xe07CC12Ef3fa7922377Bb0D1B6f8194d16aeF938",
+  DEPARTMENT_REGISTRY: "0x94fBa76403B64a335fC61e7B2d16591Ac67778E9",
+  BUDGET_CONTROLLER: "0x9E798AA72BA0e23Be43aeF67697A7c19a1677515",
+  PROPOSAL_MANAGER: "0x14D680e04c892109ef9b9ac76db71FCb0D1D42c0",
 } as const;
 
 export type TransactionType =
@@ -58,13 +58,21 @@ export interface DepartmentDetails {
   projects: number;
   utilization: string;
   logo: string;
-  transactions: DepartmentTransaction[];
-  proposals: DepartmentProposal[];
-  performance: {
-    budgetEfficiency: string;
-    projectCompletion: string;
-    resourceUtilization: string;
-  };
+  departmentHead: string;
+  address: string;
+  activeProposals: {
+    title: string;
+    amount: string;
+    status: string;
+    submittedDate: string;
+  }[];
+  recentActivity: {
+    type: string;
+    amount: string;
+    date: string;
+    status: string;
+    txHash: string;
+  }[];
 }
 
 // Add this interface for price API responses
@@ -465,13 +473,10 @@ export class DepartmentSystemActions {
         projects: department.projects,
         utilization: department.efficiency,
         logo: department.logoUri,
-        transactions: formattedTransactions,
-        proposals: formattedProposals,
-        performance: {
-          budgetEfficiency: department.efficiency,
-          projectCompletion: "87.2%", // You might want to calculate this from actual data
-          resourceUtilization: "91.8%", // You might want to calculate this from actual data
-        },
+        departmentHead: department.departmentHead,
+        address: department.departmentHead,
+        activeProposals: formattedProposals,
+        recentActivity: formattedTransactions,
       };
     } catch (error) {
       console.error("Error fetching department details:", error);
