@@ -351,12 +351,6 @@ export default function DepartmentDashboard({
     }
   };
 
-  // Add this handler function
-  const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    // Stop event propagation when input is focused
-    e.stopPropagation();
-  };
-
   // Update the Recent Activity section in the component
   const RecentActivity = () => {
     return (
@@ -530,10 +524,9 @@ export default function DepartmentDashboard({
               type="text"
               value={projectForm.title}
               onChange={(e) =>
-                setProjectForm({ ...projectForm, title: e.target.value })
+                setBudgetForm((prev) => ({ ...prev, title: e.target.value }))
               }
-              onKeyDown={handleInputKeyDown}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               placeholder="Enter project title"
               required
             />
@@ -545,7 +538,7 @@ export default function DepartmentDashboard({
             <Select
               value={projectForm.category}
               onValueChange={(value: ProjectForm["category"]) =>
-                setProjectForm({ ...projectForm, category: value })
+                setBudgetForm((prev) => ({ ...prev, category: value }))
               }
             >
               <SelectTrigger className="w-full">
@@ -567,10 +560,9 @@ export default function DepartmentDashboard({
               type="text"
               value={projectForm.amount}
               onChange={(e) =>
-                setProjectForm({ ...projectForm, amount: e.target.value })
+                setBudgetForm((prev) => ({ ...prev, amount: e.target.value }))
               }
-              onKeyDown={handleInputKeyDown}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               placeholder="Enter amount in ETH"
               required
             />
@@ -583,10 +575,9 @@ export default function DepartmentDashboard({
               type="text"
               value={projectForm.timeline}
               onChange={(e) =>
-                setProjectForm({ ...projectForm, timeline: e.target.value })
+                setBudgetForm((prev) => ({ ...prev, timeline: e.target.value }))
               }
-              onKeyDown={handleInputKeyDown}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               placeholder="e.g., 3 months, Q4 2024"
               required
             />
@@ -598,10 +589,12 @@ export default function DepartmentDashboard({
             <textarea
               value={projectForm.description}
               onChange={(e) =>
-                setProjectForm({ ...projectForm, description: e.target.value })
+                setBudgetForm((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
               }
-              onKeyDown={handleInputKeyDown}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               rows={4}
               placeholder="Enter project description"
               required
@@ -614,10 +607,12 @@ export default function DepartmentDashboard({
             <textarea
               value={projectForm.objectives}
               onChange={(e) =>
-                setProjectForm({ ...projectForm, objectives: e.target.value })
+                setBudgetForm((prev) => ({
+                  ...prev,
+                  objectives: e.target.value,
+                }))
               }
-              onKeyDown={handleInputKeyDown}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
               rows={4}
               placeholder="Enter project objectives"
               required
@@ -1125,7 +1120,7 @@ export default function DepartmentDashboard({
                   onChange={(e) =>
                     setProposalForm({ ...proposalForm, title: e.target.value })
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                     formErrors.title ? "border-red-300" : "border-gray-300"
                   }`}
                   placeholder="Enter proposal title"
@@ -1147,7 +1142,7 @@ export default function DepartmentDashboard({
                   onChange={(e) =>
                     setProposalForm({ ...proposalForm, amount: e.target.value })
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                     formErrors.amount ? "border-red-300" : "border-gray-300"
                   }`}
                   placeholder="Enter amount (e.g., $1.5M)"
@@ -1171,7 +1166,7 @@ export default function DepartmentDashboard({
                       description: e.target.value,
                     })
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${
                     formErrors.description
                       ? "border-red-300"
                       : "border-gray-300"
@@ -1270,7 +1265,7 @@ export default function DepartmentDashboard({
                   onChange={(e) =>
                     setBudgetForm({ ...budgetForm, amount: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                   placeholder="Enter amount"
                 />
               </div>
@@ -1306,7 +1301,7 @@ export default function DepartmentDashboard({
                   onChange={(e) =>
                     setBudgetForm({ ...budgetForm, reason: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                   rows={4}
                   placeholder="Enter reason for budget update"
                 />
