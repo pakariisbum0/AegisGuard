@@ -75,7 +75,7 @@ export function ProposalCard({
       )}
 
       {/* Progress Bar */}
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
             className="h-full bg-blue-500 transition-all duration-500"
@@ -86,7 +86,7 @@ export function ProposalCard({
           <span className="text-xs text-gray-500">Review Progress</span>
           <span className="text-xs font-medium text-gray-700">{progress}%</span>
         </div>
-      </div>
+      </div> */}
 
       {/* Footer */}
       <div className="grid grid-cols-2 gap-4">
