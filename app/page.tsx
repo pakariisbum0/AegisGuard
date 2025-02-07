@@ -1,5 +1,8 @@
 import Image from "next/image";
 import { Inter, Space_Grotesk } from "next/font/google";
+import { ProposalCard } from "./components/ProposalCard";
+import { DepartmentCard } from "./components/DepartmentCard";
+import { Header } from "./components/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
@@ -41,208 +44,104 @@ const departments = [
 
 const stats = [
   {
-    label: "Total Budget Tracked",
+    label: "Total Budget",
     value: "$1.2T",
     change: "+12.3%",
     trend: "up",
-    subtitle: "On Blockchain"
   },
   {
-    label: "Verified Transactions",
-    value: "2.4M",
-    change: "+1,234",
+    label: "Departments",
+    value: "45+",
+    change: "+2",
     trend: "up",
-    subtitle: "Last 24h"
   },
   {
-    label: "Active Proposals",
-    value: "156",
-    change: "-12",
+    label: "Active Projects",
+    value: "12,458",
+    change: "-234",
     trend: "down",
-    subtitle: "Under Review"
   },
   {
-    label: "Blockchain Health",
-    value: "99.9%",
-    subtitle: "Uptime",
-  },
-];
-
-const budgetPhases = [
-  {
-    phase: "Proposal",
-    status: "In Progress",
-    departments: 12,
-    totalAmount: "$450B",
-  },
-  {
-    phase: "Review",
-    status: "Active",
-    departments: 8,
-    totalAmount: "$280B",
-  },
-  {
-    phase: "Approved",
-    status: "Complete",
-    departments: 25,
-    totalAmount: "$470B",
+    label: "Q2 2024",
+    value: "94%",
+    subtitle: "Budget Utilized",
   },
 ];
 
 export default function Home() {
   return (
     <div className={`min-h-screen bg-white ${inter.className}`}>
-      {/* Simplified Header - Remove the USA banner and make header minimal */}
-      <header className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
-              >
-                DOGE
-              </span>
-            </div>
-            <nav className="flex items-center gap-8">
-              {["Home", "Departments", "Reports"].map((item) => (
-                <a
-                  key={item}
-                  href="#"
-                  className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  {item}
-                </a>
-              ))}
-              <button className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors text-sm">
-                Sign In
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+      <Header />
       <main className="pt-16">
-        {" "}
-        {/* Add padding-top to account for fixed header */}
         {/* Simplified Hero - Remove background image for cleaner look */}
         <div className="bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
             <div className="max-w-3xl mx-auto text-center space-y-6">
-              <h1 className={`text-4xl sm:text-5xl font-bold text-gray-900 ${spaceGrotesk.className}`}>
-                Blockchain-Powered
+              <h1
+                className={`text-4xl sm:text-5xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+              >
+                Federal Spending
                 <span className="block mt-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-violet-600">
-                  Government Transparency
+                  Transparency Portal
                 </span>
               </h1>
               <p className="text-lg text-gray-600 leading-relaxed">
-                Track, verify, and analyze government spending with immutable blockchain records
+                Track and analyze government spending with real-time insights
               </p>
               <div className="flex gap-4 justify-center">
                 <button className="bg-black text-white px-6 py-2.5 rounded-lg text-sm hover:bg-gray-800 transition-colors">
-                  Explore Departments
+                  Get Started
                 </button>
                 <button className="text-gray-700 bg-gray-50 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-100 transition-colors">
-                  Verify Transaction
+                  Learn More
                 </button>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Add Budget Phase Timeline */}
-        <div className="bg-gray-50 border-y">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <h2 className={`text-2xl font-bold text-gray-900 mb-8 ${spaceGrotesk.className}`}>
-              Budget Cycle Status
-            </h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              {budgetPhases.map((phase, i) => (
+        {/* Add consistent max-width container */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Stats Section */}
+          <div className="py-16">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {stats.map((stat) => (
                 <div
-                  key={phase.phase}
-                  className="bg-white rounded-xl p-6 border border-gray-100 hover:border-gray-200 transition-all relative overflow-hidden"
+                  key={stat.label}
+                  className="bg-white rounded-xl p-6 hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-gray-200 relative overflow-hidden"
                 >
-                  <div className={`absolute top-0 left-0 right-0 h-1 ${
-                    i === 0 ? "bg-blue-500" : i === 1 ? "bg-yellow-500" : "bg-green-500"
-                  }`} />
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">{phase.phase}</h3>
-                      <p className="text-sm text-gray-500">{phase.status}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      i === 0 ? "bg-blue-50 text-blue-600" : 
-                      i === 1 ? "bg-yellow-50 text-yellow-600" : 
-                      "bg-green-50 text-green-600"
-                    }`}>
-                      {phase.departments} Departments
-                    </span>
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500/20 to-violet-500/20" />
+
+                  <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stat.value}
+                    </p>
+                    {stat.subtitle && (
+                      <span className="text-sm text-gray-500">
+                        {stat.subtitle}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">{phase.totalAmount}</p>
+                  {stat.change && (
+                    <div className="mt-2 flex items-center">
+                      {stat.trend === "up" ? (
+                        <span className="text-emerald-600 text-sm bg-emerald-50 px-2 py-0.5 rounded-full">
+                          ↑ {stat.change}
+                        </span>
+                      ) : (
+                        <span className="text-red-600 text-sm bg-red-50 px-2 py-0.5 rounded-full">
+                          ↓ {stat.change}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Existing Stats Section with updated styling */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="bg-white rounded-xl p-6 hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-gray-200 relative overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500/20 to-violet-500/20" />
-
-                <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stat.value}
-                  </p>
-                  {stat.subtitle && (
-                    <span className="text-sm text-gray-500">
-                      {stat.subtitle}
-                    </span>
-                  )}
-                </div>
-                {stat.change && (
-                  <div className="mt-2 flex items-center">
-                    {stat.trend === "up" ? (
-                      <span className="text-emerald-600 text-sm bg-emerald-50 px-2 py-0.5 rounded-full">
-                        ↑ {stat.change}
-                      </span>
-                    ) : (
-                      <span className="text-red-600 text-sm bg-red-50 px-2 py-0.5 rounded-full">
-                        ↓ {stat.change}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Add Blockchain Verification Section */}
-          <div className="mt-24 bg-gray-50 rounded-xl p-8 border border-gray-100">
-            <div className="max-w-2xl mx-auto text-center">
-              <h2 className={`text-2xl font-bold text-gray-900 mb-4 ${spaceGrotesk.className}`}>
-                Verify Transaction
-              </h2>
-              <div className="flex gap-4">
-                <input
-                  type="text"
-                  placeholder="Enter transaction hash or department ID"
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <button className="bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition-colors">
-                  Verify
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Department Cards with blockchain info */}
-          <div className="mt-24">
+          {/* Department Section */}
+          <div className="py-16">
             <div className="flex justify-between items-center mb-12">
               <h2
                 className={`text-2xl font-bold text-gray-900 ${spaceGrotesk.className}`}
@@ -256,57 +155,183 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 gap-8">
               {departments.map((dept, i) => (
-                <div
-                  key={i}
-                  className="group bg-white rounded-xl p-6 hover:shadow-lg transition-all duration-300 border border-gray-100 hover:border-gray-200"
-                >
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 group-hover:border-gray-200 transition-colors">
-                      <Image
-                        src={dept.logo}
-                        alt={dept.name}
-                        width={40}
-                        height={40}
-                        className="rounded-lg"
-                      />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {dept.name}
-                    </h3>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    {[
-                      ["Budget", dept.budget],
-                      ["Projects", dept.projects],
-                      ["Utilization", dept.utilization],
-                    ].map(([label, value]) => (
-                      <div
-                        key={label}
-                        className="group-hover:bg-gray-50 p-3 rounded-lg transition-colors border border-transparent group-hover:border-gray-100"
-                      >
-                        <p className="text-sm text-gray-500">{label}</p>
-                        <p className="text-lg font-medium text-gray-900">
-                          {value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="absolute top-4 right-4">
-                    <span className="bg-green-50 text-green-600 text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      Verified
-                    </span>
-                  </div>
-                </div>
+                <DepartmentCard key={i} {...dept} />
               ))}
+            </div>
+          </div>
+
+          {/* Recent Activity Section */}
+          <div className="py-16">
+            <div className="flex justify-between items-center mb-12">
+              <h2
+                className={`text-2xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+              >
+                Recent Activity
+              </h2>
+              <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1">
+                View Full Timeline →
+              </button>
+            </div>
+
+            {/* Show only 2 most recent transactions */}
+            <div className="space-y-6">
+              {[
+                {
+                  department: "Department of Defense",
+                  action: "Budget Allocation",
+                  amount: "$50M",
+                  status: "Approved",
+                  date: "2024-03-15",
+                  txHash: "0x1234...5678",
+                },
+                {
+                  department: "NASA",
+                  action: "Expenditure",
+                  amount: "$2.5M",
+                  status: "Completed",
+                  date: "2024-03-14",
+                  txHash: "0x8765...4321",
+                },
+              ]
+                .slice(0, 2)
+                .map((item, i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-xl p-6 border border-gray-100 hover:border-gray-200 transition-all duration-300 relative overflow-hidden group"
+                  >
+                    <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-blue-500/20 to-violet-500/20" />
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {item.department}
+                        </h3>
+                        <p className="text-sm text-gray-500">{item.action}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-gray-900">
+                          {item.amount}
+                        </p>
+                        <p className="text-sm text-gray-500">{item.date}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs ${
+                            item.status === "Approved"
+                              ? "bg-emerald-50 text-emerald-600"
+                              : "bg-blue-50 text-blue-600"
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          Tx: {item.txHash}
+                        </span>
+                      </div>
+                      <button className="text-sm text-blue-600 hover:text-blue-700">
+                        View Details →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Proposals Section */}
+          <div className="py-16">
+            <div className="flex justify-between items-center mb-12">
+              <h2
+                className={`text-2xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+              >
+                Latest Proposals
+              </h2>
+              <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                View All Proposals →
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              {[
+                {
+                  department: "Department of Education",
+                  amount: "$75M",
+                  status: "Under Review",
+                  submittedDate: "2024-03-10",
+                  category: "Infrastructure",
+                  description:
+                    "Modernization of educational facilities and digital learning platforms across 500 schools.",
+                  progress: 65,
+                },
+                {
+                  department: "NASA",
+                  amount: "$120M",
+                  status: "Pending",
+                  submittedDate: "2024-03-12",
+                  category: "Research",
+                  description:
+                    "Advanced propulsion systems research and development for deep space exploration missions.",
+                  progress: 30,
+                },
+              ]
+                .slice(0, 2)
+                .map((proposal) => (
+                  <ProposalCard key={proposal.department} {...proposal} />
+                ))}
+            </div>
+          </div>
+
+          {/* AI Section */}
+          <div className="py-16">
+            <div className="flex items-start gap-6">
+              <div className="p-3 rounded-full bg-blue-50 border border-blue-100">
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2
+                  className={`text-2xl font-bold text-gray-900 mb-2 ${spaceGrotesk.className}`}
+                >
+                  AI-Powered Monitoring
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  Our AI system continuously monitors transactions for anomalies
+                  and ensures spending compliance.
+                </p>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { label: "Transactions Monitored", value: "1.2M+" },
+                    { label: "Anomalies Detected", value: "142" },
+                    { label: "Accuracy Rate", value: "99.9%" },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="bg-white p-3 rounded-lg border border-gray-100"
+                    >
+                      <p className="text-sm text-gray-500">{stat.label}</p>
+                      <p className="text-lg font-medium text-gray-900">
+                        {stat.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Simplified Footer */}
       <footer className="bg-gray-50 border-t mt-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-4 gap-8">
