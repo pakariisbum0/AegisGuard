@@ -39,7 +39,7 @@ export function CreateTransactionModal({
         throw new Error("Please enter a valid amount greater than 0");
       }
 
-      // Log available methods before attempting the transaction
+      // Log attempt
       console.log("Attempting to create transaction:", {
         department: departmentAddress,
         type: formData.type,
@@ -69,7 +69,10 @@ export function CreateTransactionModal({
       console.error("Transaction creation failed:", error);
       toast({
         title: "Error",
-        description: "Failed to create transaction. Please try again later.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create transaction. Please check your permissions and try again.",
         variant: "destructive",
       });
     } finally {

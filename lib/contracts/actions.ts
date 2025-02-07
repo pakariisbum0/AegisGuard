@@ -105,30 +105,30 @@ export interface Transaction {
 }
 
 // Add this interface to match the contract's transaction functions
-interface IBudgetController {
-  submitTransaction(
-    txType: number,
-    amount: bigint,
-    description: string
-  ): Promise<ethers.ContractTransactionResponse>;
-  getTransactionsByDepartment(department: string): Promise<
-    Array<{
-      id: bigint;
-      department: string;
-      txType: number;
-      amount: bigint;
-      description: string;
-      status: number;
-      timestamp: bigint;
-    }>
-  >;
-}
+// interface IBudgetController {
+//   createTransaction(
+//     txType: number,
+//     amount: bigint,
+//     description: string
+//   ): Promise<ethers.ContractTransactionResponse>;
+//   getTransactionsByDepartment(department: string): Promise<
+//     Array<{
+//       id: bigint;
+//       department: string;
+//       txType: number;
+//       amount: bigint;
+//       description: string;
+//       status: number;
+//       timestamp: bigint;
+//     }>
+//   >;
+// }
 
 export class DepartmentSystemActions {
   private provider: ethers.Provider;
   private signer: ethers.Signer;
   private departmentRegistry: ethers.Contract;
-  private budgetController: IBudgetController & ethers.Contract;
+  private budgetController: ethers.Contract;
   private proposalManager: ethers.Contract;
   private activityTracker: ethers.Contract;
 
@@ -144,11 +144,7 @@ export class DepartmentSystemActions {
 
     this.budgetController = new ethers.Contract(
       CONTRACT_ADDRESSES.BUDGET_CONTROLLER,
-      [
-        // Add only the functions we need
-        "function submitTransaction(uint8 txType, uint256 amount, string description) external returns (uint256)",
-        "function getTransactionsByDepartment(address department) external view returns (tuple(uint256 id, address department, uint8 txType, uint256 amount, string description, uint8 status, uint256 timestamp)[])",
-      ],
+      BudgetControllerABI.abi,
       signer
     ) as IBudgetController & ethers.Contract;
 
@@ -783,31 +779,63 @@ export class DepartmentSystemActions {
     description: string
   ): Promise<ethers.ContractTransactionResponse> {
     try {
+      const senderAddress = await this.signer.getAddress();
+
+      // Check if sender is a department head in the registry
+      const isDepartmentHead = await this.departmentRegistry.departmentHeads(
+        senderAddress
+      );
+
+      if (!isDepartmentHead) {
+        throw new Error("Only department heads can create transactions");
+      }
+
+      // Get department details
+      const departmentDetails =
+        await this.departmentRegistry.getDepartmentDetails(department);
+
+      // Verify sender is the head of this specific department
+      if (
+        departmentDetails.departmentHead.toLowerCase() !==
+        senderAddress.toLowerCase()
+      ) {
+        throw new Error("You are not the head of this department");
+      }
+
       const amountWei = ethers.parseEther(amount);
 
       // Convert TransactionType to number index
-      const txTypeIndex = Object.values(TransactionType).indexOf(type);
+      let txTypeIndex: number;
+      switch (type) {
+        case TransactionType.BUDGET_ALLOCATION:
+          txTypeIndex = 0;
+          break;
+        case TransactionType.PROJECT_FUNDING:
+          txTypeIndex = 1;
+          break;
+        case TransactionType.BUDGET_UPDATE:
+          txTypeIndex = 2;
+          break;
+        case TransactionType.EXPENSE:
+          txTypeIndex = 3;
+          break;
+        default:
+          throw new Error("Invalid transaction type");
+      }
 
-      const tx = await this.budgetController.submitTransaction(
+      // Call createTransaction instead of submitTransaction
+      const tx = await this.budgetController.createTransaction(
         txTypeIndex,
         amountWei,
         description
       );
 
-      // Log the activity after successful transaction creation
-      await this.logActivity(
-        department,
-        type,
-        amountWei,
-        description,
-        tx.hash,
-        "Pending"
-      );
-
       return tx;
     } catch (error) {
       console.error("Failed to create transaction:", error);
-      throw new Error(`Transaction creation failed: ${error.message}`);
+      throw new Error(
+        error instanceof Error ? error.message : "Unknown error occurred"
+      );
     }
   }
 }
