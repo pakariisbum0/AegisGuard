@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import BudgetControllerABI from "../../artifacts/contracts/BudgetController.sol/BudgetController.json";
 import DepartmentRegistryABI from "../../artifacts/contracts/DepartmentRegistry.sol/DepartmentRegistry.json";
 import ProposalManagerABI from "../../artifacts/contracts/ProposalManager.sol/ProposalManager.json";
+import { setupNetwork } from "@/lib/contracts/network";
 
 // Contract addresses from deployment
 const CONTRACT_ADDRESSES = {
@@ -20,6 +21,57 @@ export type ProposalStatus =
   | "UNDER_REVIEW"
   | "APPROVED"
   | "REJECTED";
+
+export interface Department {
+  name: string;
+  budget: string;
+  spent: string;
+  efficiency: string;
+  projects: number;
+  isActive: boolean;
+  departmentHead: string;
+  logoUri: string;
+}
+
+export interface DepartmentTransaction {
+  description: string;
+  amount: string;
+  date: string;
+  status: string;
+  ethAmount: string;
+}
+
+export interface DepartmentProposal {
+  title: string;
+  amount: string;
+  status: string;
+  submittedDate: string;
+  ethAmount: string;
+}
+
+export interface DepartmentDetails {
+  name: string;
+  budget: {
+    eth: string;
+    usd: string;
+  };
+  projects: number;
+  utilization: string;
+  logo: string;
+  transactions: DepartmentTransaction[];
+  proposals: DepartmentProposal[];
+  performance: {
+    budgetEfficiency: string;
+    projectCompletion: string;
+    resourceUtilization: string;
+  };
+}
+
+// Add this interface for price API responses
+interface PriceResponse {
+  success: boolean;
+  price: number;
+}
 
 export class DepartmentSystemActions {
   private provider: ethers.Provider;
@@ -182,6 +234,319 @@ export class DepartmentSystemActions {
     const tx = await this.departmentRegistry.addSuperAdmin(address);
     const receipt = await tx.wait();
     return receipt;
+  }
+
+  // Add this new method
+  async fetchAllDepartments(): Promise<Department[]> {
+    try {
+      // Get all department addresses
+      const departmentAddresses = await this.getAllDepartments();
+
+      // Fetch details for each department
+      const departmentDetails = await Promise.all(
+        departmentAddresses.map(async (address) => {
+          const details = await this.getDepartmentDetails(address);
+          return {
+            name: details.name,
+            budget: ethers.formatEther(details.budget),
+            spent: ethers.formatEther(details.spent),
+            efficiency: `${details.efficiency}%`,
+            projects: Number(details.projects),
+            isActive: details.isActive,
+            departmentHead: details.departmentHead,
+            logoUri: details.logoUri,
+          };
+        })
+      );
+
+      return departmentDetails;
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+      throw error;
+    }
+  }
+
+  // Add these new authentication methods
+  static async connectWallet() {
+    if (typeof window.ethereum === "undefined") {
+      throw new Error("Please install MetaMask to continue");
+    }
+
+    await setupNetwork();
+    const provider = new ethers.BrowserProvider(window.ethereum as any);
+    const signer = await provider.getSigner();
+    return { provider, signer };
+  }
+
+  async authenticateUser(
+    role: "admin" | "department",
+    departmentName?: string
+  ) {
+    try {
+      const userAddress = await this.signer.getAddress();
+
+      if (role === "admin") {
+        const isAdmin = await this.isSuperAdmin(userAddress);
+        if (!isAdmin) {
+          throw new Error("You are not authorized as a super admin");
+        }
+        return { isAuthenticated: true, redirectPath: "/admin/dashboard" };
+      } else {
+        if (!departmentName) {
+          throw new Error("Please select a department");
+        }
+
+        const departments = await this.fetchAllDepartments();
+        const department = departments.find((d) => d.name === departmentName);
+
+        if (!department) {
+          throw new Error("Department not found");
+        }
+
+        if (
+          department.departmentHead.toLowerCase() !== userAddress.toLowerCase()
+        ) {
+          throw new Error("You are not authorized for this department");
+        }
+
+        return {
+          isAuthenticated: true,
+          redirectPath: `/dashboard/${departmentName
+            .toLowerCase()
+            .replace(/ /g, "-")}`,
+        };
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async fetchActiveDepartments(): Promise<Department[]> {
+    try {
+      const departments = await this.fetchAllDepartments();
+      const activeDepartments = departments.filter((d) => d.isActive);
+      console.log("Active departments:", activeDepartments); // Debug log
+      return activeDepartments;
+    } catch (error) {
+      console.error("Error fetching active departments:", error);
+      throw error;
+    }
+  }
+
+  // Updated ETH to USD conversion method
+  private async getEthToUsdRate(): Promise<number> {
+    const apis = [
+      {
+        url: "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+        handler: async (response: any): Promise<PriceResponse> => ({
+          success: true,
+          price: response.ethereum?.usd || 0,
+        }),
+      },
+      {
+        url: "https://api.coinbase.com/v2/prices/ETH-USD/spot",
+        handler: async (response: any): Promise<PriceResponse> => ({
+          success: true,
+          price: parseFloat(response.data?.amount) || 0,
+        }),
+      },
+      {
+        url: "https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD",
+        handler: async (response: any): Promise<PriceResponse> => ({
+          success: true,
+          price: response.USD || 0,
+        }),
+      },
+    ];
+
+    for (const api of apis) {
+      try {
+        const response = await fetch(api.url);
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        const result = await api.handler(data);
+
+        if (result.success && result.price > 0) {
+          console.log(`ETH/USD Rate: $${result.price}`);
+          return result.price;
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch from ${api.url}:`, error);
+        continue;
+      }
+    }
+
+    // Fallback price if all APIs fail
+    console.warn("Using fallback ETH price");
+    return 3000;
+  }
+
+  private async convertEthToUsd(ethAmount: string): Promise<string> {
+    try {
+      const rate = await this.getEthToUsdRate();
+      const usdAmount = parseFloat(ethAmount) * rate;
+
+      // Format with proper currency notation
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(usdAmount);
+    } catch (error) {
+      console.error("Error converting ETH to USD:", error);
+      // Return a formatted fallback calculation
+      const fallbackRate = 3000;
+      const usdAmount = parseFloat(ethAmount) * fallbackRate;
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(usdAmount);
+    }
+  }
+
+  async getDepartmentDetailsBySlug(slug: string): Promise<DepartmentDetails> {
+    try {
+      // Get all departments and find the one matching the slug
+      const departments = await this.fetchAllDepartments();
+      const department = departments.find(
+        (d) => d.name.toLowerCase().replace(/ /g, "-") === slug
+      );
+
+      if (!department) {
+        throw new Error("Department not found");
+      }
+
+      // Get transactions and proposals
+      const transactions = await this.getTransactionsByDepartment(
+        department.departmentHead
+      );
+      const proposals = await this.getProposalsByDepartment(
+        department.departmentHead
+      );
+
+      // Get ETH/USD rate
+      const ethRate = await this.getEthToUsdRate();
+
+      // Format transactions
+      const formattedTransactions = await Promise.all(
+        transactions.map(async (tx) => ({
+          description: tx.description,
+          ethAmount: ethers.formatEther(tx.amount),
+          amount: await this.convertEthToUsd(ethers.formatEther(tx.amount)),
+          date: new Date(Number(tx.timestamp) * 1000).toISOString(),
+          status: tx.status,
+        }))
+      );
+
+      // Format proposals
+      const formattedProposals = await Promise.all(
+        proposals.map(async (p) => ({
+          title: p.title,
+          ethAmount: ethers.formatEther(p.amount),
+          amount: await this.convertEthToUsd(ethers.formatEther(p.amount)),
+          status: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][p.status],
+          submittedDate: new Date(Number(p.timestamp) * 1000).toISOString(),
+        }))
+      );
+
+      // Calculate budget in USD
+      const budgetUsd = await this.convertEthToUsd(department.budget);
+
+      return {
+        name: department.name,
+        budget: {
+          eth: `${department.budget} ETH`,
+          usd: budgetUsd,
+        },
+        projects: department.projects,
+        utilization: department.efficiency,
+        logo: department.logoUri,
+        transactions: formattedTransactions,
+        proposals: formattedProposals,
+        performance: {
+          budgetEfficiency: department.efficiency,
+          projectCompletion: "87.2%", // You might want to calculate this from actual data
+          resourceUtilization: "91.8%", // You might want to calculate this from actual data
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching department details:", error);
+      throw error;
+    }
+  }
+
+  async updateDepartmentBudget(
+    departmentAddress: string,
+    newBudgetEth: string,
+    description: string = "Budget Update"
+  ): Promise<ethers.ContractTransaction> {
+    try {
+      // Convert ETH amount to Wei
+      const newBudgetWei = ethers.parseEther(newBudgetEth);
+
+      // Create and wait for the transaction
+      const tx = await this.budgetController.updateDepartmentBudget(
+        departmentAddress,
+        newBudgetWei
+      );
+      const receipt = await tx.wait();
+
+      // Fetch updated department details to confirm the change
+      const updatedDetails = await this.getDepartmentDetails(departmentAddress);
+      console.log("Budget updated successfully:", {
+        department: departmentAddress,
+        newBudget: ethers.formatEther(updatedDetails.budget),
+        txHash: receipt.hash,
+      });
+
+      return receipt;
+    } catch (error) {
+      console.error("Failed to update department budget:", error);
+      throw error;
+    }
+  }
+
+  // Add a helper method to validate budget updates
+  async validateBudgetUpdate(
+    departmentAddress: string,
+    newBudgetEth: string
+  ): Promise<{
+    isValid: boolean;
+    currentBudget: string;
+    difference: string;
+    message?: string;
+  }> {
+    try {
+      const details = await this.getDepartmentDetails(departmentAddress);
+      const currentBudgetEth = ethers.formatEther(details.budget);
+      const difference =
+        parseFloat(newBudgetEth) - parseFloat(currentBudgetEth);
+
+      // Add your validation rules here
+      if (parseFloat(newBudgetEth) <= 0) {
+        return {
+          isValid: false,
+          currentBudget: currentBudgetEth,
+          difference: difference.toString(),
+          message: "Budget must be greater than 0",
+        };
+      }
+
+      // You can add more validation rules as needed
+
+      return {
+        isValid: true,
+        currentBudget: currentBudgetEth,
+        difference: difference.toString(),
+      };
+    } catch (error) {
+      console.error("Budget validation failed:", error);
+      throw error;
+    }
   }
 }
 
