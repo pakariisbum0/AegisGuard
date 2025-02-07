@@ -11,6 +11,8 @@
 !.yarn/versions
 /prerun.sh
 /postrun.sh
+.cursorrules
+/context/design_doc.md
 # testing
 /coverage
 
