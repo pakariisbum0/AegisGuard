@@ -8,9 +8,9 @@ import { setupNetwork } from "@/lib/contracts/network";
 // Contract addresses from deployment
 const CONTRACT_ADDRESSES = {
   DEPARTMENT_REGISTRY: "0x68de061DDf89dD58bea442eA033D0E1983ad0880",
-  BUDGET_CONTROLLER: "0x68de061DDf89dD58bea442eA033D0E1983ad0880",
-  PROPOSAL_MANAGER: "0x372b4c6649C2F8D586a52d78d84f276FCfE16a8c",
-  ACTIVITY_TRACKER: "0x6832C283e812a611422F026Dee8F198664C33Fe9",
+  BUDGET_CONTROLLER: "0x372b4c6649C2F8D586a52d78d84f276FCfE16a8c",
+  PROPOSAL_MANAGER: "0x6832C283e812a611422F026Dee8F198664C33Fe9",
+  ACTIVITY_TRACKER: "0x3Bc23103bd1862F8E8EA02104d7b39B30f487f10",
 } as const;
 
 export type TransactionType =
@@ -427,6 +427,9 @@ export class DepartmentSystemActions {
 
   async getDepartmentDetailsBySlug(slug: string): Promise<DepartmentDetails> {
     try {
+      const network = await this.provider.getNetwork();
+      console.log("Current network:", network); // Debug log
+
       // Get all departments and find the one matching the slug
       const departments = await this.fetchAllDepartments();
       const department = departments.find(
@@ -434,74 +437,73 @@ export class DepartmentSystemActions {
       );
 
       if (!department) {
-        throw new Error("Department not found");
+        throw new Error(`Department with slug '${slug}' not found`);
       }
 
-      // Get transactions and proposals
-      const transactions = await this.getTransactionsByDepartment(
-        department.departmentHead
-      );
-      const proposals = await this.getProposalsByDepartment(
-        department.departmentHead
-      );
+      console.log("Found department:", department); // Debug log
+
+      // Get transactions and proposals with error handling
+      let transactions = [];
+      let proposals = [];
+      try {
+        transactions = await this.getTransactionsByDepartment(
+          department.departmentHead
+        );
+        console.log("Fetched transactions:", transactions); // Debug log
+      } catch (error) {
+        console.warn("Failed to fetch transactions:", error);
+      }
+
+      try {
+        proposals = await this.getProposalsByDepartment(
+          department.departmentHead
+        );
+        console.log("Fetched proposals:", proposals); // Debug log
+      } catch (error) {
+        console.warn("Failed to fetch proposals:", error);
+      }
 
       // Get ETH/USD rate
       const ethRate = await this.getEthToUsdRate();
+      console.log("ETH/USD Rate:", ethRate); // Debug log
 
       // Format transactions
-      const formattedTransactions = await Promise.all(
-        transactions.map(async (tx) => ({
-          description: tx.description,
-          ethAmount: ethers.formatEther(tx.amount),
-          amount: await this.convertEthToUsd(ethers.formatEther(tx.amount)),
-          date: new Date(Number(tx.timestamp) * 1000).toISOString(),
-          status: tx.status,
-        }))
-      );
+      const formattedTransactions = transactions.map((tx: any) => ({
+        description: tx.description || "",
+        ethAmount: ethers.formatEther(tx.amount || 0),
+        amount: this.convertEthToUsd(ethers.formatEther(tx.amount || 0)),
+        date: new Date(Number(tx.timestamp || 0) * 1000).toISOString(),
+        status: tx.status || "Pending",
+      }));
 
       // Format proposals
-      const formattedProposals = await Promise.all(
-        proposals.map(async (p) => ({
-          title: p.title,
-          ethAmount: ethers.formatEther(p.amount),
-          amount: await this.convertEthToUsd(ethers.formatEther(p.amount)),
-          status: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][p.status],
-          submittedDate: new Date(Number(p.timestamp) * 1000).toISOString(),
-        }))
-      );
+      const formattedProposals = proposals.map((p: any) => ({
+        title: p.title || "",
+        ethAmount: ethers.formatEther(p.amount || 0),
+        amount: this.convertEthToUsd(ethers.formatEther(p.amount || 0)),
+        status:
+          ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][p.status] ||
+          "PENDING",
+        submittedDate: new Date(Number(p.timestamp || 0) * 1000).toISOString(),
+      }));
 
-      // Calculate budget in USD
-      const budgetUsd = await this.convertEthToUsd(department.budget);
+      // Get recent activities with error handling
+      let recentActivities = [];
+      try {
+        recentActivities = await this.getRecentActivities(
+          department.departmentHead
+        );
+        console.log("Fetched activities:", recentActivities); // Debug log
+      } catch (error) {
+        console.warn("Failed to fetch recent activities:", error);
+      }
 
-      // Get recent activities
-      const recentActivities = await this.getRecentActivities(
-        department.departmentHead
-      );
-
-      // Format transactions and activities
-      const formattedTransactionsAndActivities = await Promise.all(
-        [...formattedTransactions, ...recentActivities].map(
-          async (activity) => ({
-            type: activity.type,
-            description: activity.description,
-            amount: activity.amount,
-            date: activity.date,
-            status: activity.status,
-            txHash: activity.txHash || "",
-          })
-        )
-      );
-
-      // Combine and sort activities by date
-      const allActivities = formattedTransactionsAndActivities
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 10); // Get most recent 10 activities
-
+      // Format and return department details
       return {
         name: department.name,
         budget: {
           eth: `${department.budget} ETH`,
-          usd: budgetUsd,
+          usd: await this.convertEthToUsd(department.budget),
         },
         projects: department.projects,
         utilization: department.efficiency,
@@ -509,11 +511,11 @@ export class DepartmentSystemActions {
         departmentHead: department.departmentHead,
         address: department.departmentHead,
         activeProposals: formattedProposals,
-        recentActivity: allActivities,
+        recentActivity: recentActivities,
       };
     } catch (error) {
-      console.error("Error fetching department details:", error);
-      throw error;
+      console.error("Error in getDepartmentDetailsBySlug:", error);
+      throw new Error(`Failed to fetch department details: ${error.message}`);
     }
   }
 

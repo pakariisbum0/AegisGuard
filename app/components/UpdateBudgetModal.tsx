@@ -42,44 +42,17 @@ export function UpdateBudgetModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
+    setIsLoading(true);
 
     try {
+      if (!newBudget) {
+        throw new Error("Please enter a new budget amount");
+      }
+
       const { provider, signer } =
         await DepartmentSystemActions.connectWallet();
       const departmentSystem = new DepartmentSystemActions(provider, signer);
-
-      // Add input validation and conversion to Wei
-      const budgetInEth = parseFloat(newBudget);
-      if (isNaN(budgetInEth) || budgetInEth <= 0) {
-        throw new Error("Please enter a valid budget amount greater than 0");
-      }
-
-      // Log the values for debugging
-      console.log("Current Budget:", currentBudget);
-      console.log("New Budget (ETH):", budgetInEth);
-      console.log("Department Address:", departmentAddress);
-
-      // Check if user is super admin
-      const isSuperAdmin = await departmentSystem.isSuperAdmin(
-        await signer.getAddress()
-      );
-      if (!isSuperAdmin) {
-        throw new Error(
-          "You don't have permission to update this department's budget. Only super admins can perform this action."
-        );
-      }
-
-      // Validate the budget update
-      const validation = await departmentSystem.validateBudgetUpdate(
-        departmentAddress,
-        newBudget
-      );
-
-      if (!validation.isValid) {
-        throw new Error(validation.message || "Invalid budget update");
-      }
 
       try {
         // Perform the update with more detailed error handling
@@ -123,11 +96,9 @@ export function UpdateBudgetModal({
       }
     } catch (err) {
       console.error("Failed to update budget:", err);
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Failed to update budget. Please check if you have sufficient permissions and try again.";
-      setError(errorMessage);
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
     } finally {
       setIsLoading(false);
     }
