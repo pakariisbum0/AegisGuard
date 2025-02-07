@@ -21,7 +21,7 @@ const departments = [
     budget: "$1.7T",
     projects: "15,234",
     utilization: "96.8%",
-    logo: "/images/dod-logo.png",
+    logo: "/images/doh.png",
     bgColor: "bg-[#0071BC]",
   },
   {
@@ -29,7 +29,7 @@ const departments = [
     budget: "$24.5B",
     projects: "12,458",
     utilization: "94.2%",
-    logo: "/images/dod-logo.png",
+    logo: "/images/nasa.png",
     bgColor: "bg-[#1A5DAD]",
   },
   {
@@ -37,7 +37,7 @@ const departments = [
     budget: "$79.8B",
     projects: "8,765",
     utilization: "92.5%",
-    logo: "/images/dod-logo.png",
+    logo: "/images/doe.png",
     bgColor: "bg-[#2E4E87]",
   },
 ];
@@ -101,8 +101,8 @@ export default function Home() {
         </div>
         {/* Add consistent max-width container */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Stats Section */}
-          <div className="py-16">
+          {/* 1. Stats Section */}
+          <div className="py-16 border-b">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {stats.map((stat) => (
                 <div
@@ -140,19 +140,21 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Department Section */}
-          <div className="py-16">
+          {/* 2. Departments Section */}
+          <div className="py-16 border-b">
             <div className="flex justify-between items-center mb-12">
               <h2
                 className={`text-2xl font-bold text-gray-900 ${spaceGrotesk.className}`}
               >
-                Featured Departments
+                Departments
               </h2>
-              <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                View All →
-              </button>
+              <a
+                href="#"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                View All Departments →
+              </a>
             </div>
-
             <div className="grid md:grid-cols-2 gap-8">
               {departments.map((dept, i) => (
                 <DepartmentCard key={i} {...dept} />
@@ -160,17 +162,20 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Recent Activity Section */}
-          <div className="py-16">
+          {/* 3. Recent Activity Section */}
+          <div className="py-16 border-b">
             <div className="flex justify-between items-center mb-12">
               <h2
                 className={`text-2xl font-bold text-gray-900 ${spaceGrotesk.className}`}
               >
                 Recent Activity
               </h2>
-              <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1">
-                View Full Timeline →
-              </button>
+              <a
+                href="#"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                View All Activity →
+              </a>
             </div>
 
             {/* Show only 2 most recent transactions */}
@@ -238,19 +243,21 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Proposals Section */}
-          <div className="py-16">
+          {/* 4. Latest Proposals Section */}
+          <div className="py-16 border-b">
             <div className="flex justify-between items-center mb-12">
               <h2
                 className={`text-2xl font-bold text-gray-900 ${spaceGrotesk.className}`}
               >
                 Latest Proposals
               </h2>
-              <button className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              <a
+                href="#"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
                 View All Proposals →
-              </button>
+              </a>
             </div>
-
             <div className="grid md:grid-cols-2 gap-8">
               {[
                 {
@@ -273,59 +280,40 @@ export default function Home() {
                     "Advanced propulsion systems research and development for deep space exploration missions.",
                   progress: 30,
                 },
-              ]
-                .slice(0, 2)
-                .map((proposal) => (
-                  <ProposalCard key={proposal.department} {...proposal} />
-                ))}
+              ].map((proposal) => (
+                <ProposalCard key={proposal.department} {...proposal} />
+              ))}
             </div>
           </div>
 
-          {/* AI Section */}
+          {/* 5. AI Monitoring Section */}
           <div className="py-16">
-            <div className="flex items-start gap-6">
-              <div className="p-3 rounded-full bg-blue-50 border border-blue-100">
-                <svg
-                  className="w-6 h-6 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h2
-                  className={`text-2xl font-bold text-gray-900 mb-2 ${spaceGrotesk.className}`}
-                >
-                  AI-Powered Monitoring
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  Our AI system continuously monitors transactions for anomalies
-                  and ensures spending compliance.
-                </p>
-                <div className="grid grid-cols-3 gap-4">
-                  {[
-                    { label: "Transactions Monitored", value: "1.2M+" },
-                    { label: "Anomalies Detected", value: "142" },
-                    { label: "Accuracy Rate", value: "99.9%" },
-                  ].map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="bg-white p-3 rounded-lg border border-gray-100"
-                    >
-                      <p className="text-sm text-gray-500">{stat.label}</p>
-                      <p className="text-lg font-medium text-gray-900">
-                        {stat.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+            <div className="bg-white rounded-xl p-8 border border-gray-100">
+              <h2
+                className={`text-2xl font-bold text-gray-900 mb-4 ${spaceGrotesk.className}`}
+              >
+                AI-Powered Monitoring
+              </h2>
+              <p className="text-gray-600 mb-8">
+                Our AI system continuously monitors transactions for anomalies
+                and ensures spending compliance.
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { label: "Transactions Monitored", value: "1.2M+" },
+                  { label: "Anomalies Detected", value: "142" },
+                  { label: "Accuracy Rate", value: "99.9%" },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="bg-gray-50 p-4 rounded-lg border border-gray-100"
+                  >
+                    <p className="text-sm text-gray-500">{stat.label}</p>
+                    <p className="text-lg font-medium text-gray-900">
+                      {stat.value}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
