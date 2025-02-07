@@ -1,18 +1,35 @@
 "use client";
 
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/contexts/auth-context";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Loader2 } from "lucide-react";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
 export function Header() {
   const pathname = usePathname();
+  const { isAuthenticated, isLoading, user, login, logout } = useAuth();
+
+  // Add debug logging
+  console.log("Auth State:", { isAuthenticated, isLoading, user });
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true;
     if (path !== "/" && pathname.startsWith(path)) return true;
     return false;
+  };
+
+  const truncateAddress = (address: string) => {
+    return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
   };
 
   return (
@@ -46,12 +63,33 @@ export function Header() {
                 {item.name}
               </Link>
             ))}
-            <Link
-              href="/auth/signin"
-              className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800 transition-colors text-sm"
-            >
-              Sign In
-            </Link>
+
+            {isLoading && isAuthenticated ? (
+              <Button disabled variant="outline" className="gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading...
+              </Button>
+            ) : isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    {truncateAddress(user?.walletAddress || "")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => logout()}>
+                    Disconnect
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                onClick={() => login()}
+                className="bg-black text-white hover:bg-gray-800"
+              >
+                Connect Wallet
+              </Button>
+            )}
           </nav>
         </div>
       </div>
