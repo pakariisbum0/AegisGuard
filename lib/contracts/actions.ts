@@ -2,13 +2,15 @@ import { ethers } from "ethers";
 import BudgetControllerABI from "../../artifacts/contracts/BudgetController.sol/BudgetController.json";
 import DepartmentRegistryABI from "../../artifacts/contracts/DepartmentRegistry.sol/DepartmentRegistry.json";
 import ProposalManagerABI from "../../artifacts/contracts/ProposalManager.sol/ProposalManager.json";
+import ActivityTrackerABI from "../../artifacts/contracts/ActivityTracker.sol/ActivityTracker.json";
 import { setupNetwork } from "@/lib/contracts/network";
 
 // Contract addresses from deployment
 const CONTRACT_ADDRESSES = {
-  DEPARTMENT_REGISTRY: "0x94fBa76403B64a335fC61e7B2d16591Ac67778E9",
-  BUDGET_CONTROLLER: "0x9E798AA72BA0e23Be43aeF67697A7c19a1677515",
-  PROPOSAL_MANAGER: "0x14D680e04c892109ef9b9ac76db71FCb0D1D42c0",
+  DEPARTMENT_REGISTRY: "0x68de061DDf89dD58bea442eA033D0E1983ad0880",
+  BUDGET_CONTROLLER: "0x68de061DDf89dD58bea442eA033D0E1983ad0880",
+  PROPOSAL_MANAGER: "0x372b4c6649C2F8D586a52d78d84f276FCfE16a8c",
+  ACTIVITY_TRACKER: "0x6832C283e812a611422F026Dee8F198664C33Fe9",
 } as const;
 
 export type TransactionType =
@@ -87,6 +89,7 @@ export class DepartmentSystemActions {
   private departmentRegistry: ethers.Contract;
   private budgetController: ethers.Contract;
   private proposalManager: ethers.Contract;
+  private activityTracker: ethers.Contract;
 
   constructor(provider: ethers.Provider, signer: ethers.Signer) {
     this.provider = provider;
@@ -107,6 +110,12 @@ export class DepartmentSystemActions {
     this.proposalManager = new ethers.Contract(
       CONTRACT_ADDRESSES.PROPOSAL_MANAGER,
       ProposalManagerABI.abi,
+      signer
+    );
+
+    this.activityTracker = new ethers.Contract(
+      CONTRACT_ADDRESSES.ACTIVITY_TRACKER,
+      ActivityTrackerABI.abi,
       signer
     );
   }
@@ -464,6 +473,30 @@ export class DepartmentSystemActions {
       // Calculate budget in USD
       const budgetUsd = await this.convertEthToUsd(department.budget);
 
+      // Get recent activities
+      const recentActivities = await this.getRecentActivities(
+        department.departmentHead
+      );
+
+      // Format transactions and activities
+      const formattedTransactionsAndActivities = await Promise.all(
+        [...formattedTransactions, ...recentActivities].map(
+          async (activity) => ({
+            type: activity.type,
+            description: activity.description,
+            amount: activity.amount,
+            date: activity.date,
+            status: activity.status,
+            txHash: activity.txHash || "",
+          })
+        )
+      );
+
+      // Combine and sort activities by date
+      const allActivities = formattedTransactionsAndActivities
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 10); // Get most recent 10 activities
+
       return {
         name: department.name,
         budget: {
@@ -476,11 +509,33 @@ export class DepartmentSystemActions {
         departmentHead: department.departmentHead,
         address: department.departmentHead,
         activeProposals: formattedProposals,
-        recentActivity: formattedTransactions,
+        recentActivity: allActivities,
       };
     } catch (error) {
       console.error("Error fetching department details:", error);
       throw error;
+    }
+  }
+
+  private async logActivity(
+    department: string,
+    activityType: string,
+    amount: bigint,
+    description: string,
+    txHash: string,
+    status: string
+  ) {
+    try {
+      await this.activityTracker.logActivity(
+        department,
+        activityType,
+        amount,
+        description,
+        txHash,
+        status
+      );
+    } catch (error) {
+      console.error("Failed to log activity:", error);
     }
   }
 
@@ -490,16 +545,22 @@ export class DepartmentSystemActions {
     description: string = "Budget Update"
   ): Promise<ethers.ContractTransaction> {
     try {
-      // Convert ETH amount to Wei
       const newBudgetWei = ethers.parseEther(newBudgetEth);
-
-      // Call updateBudget on the DepartmentRegistry contract instead of BudgetController
       const tx = await this.departmentRegistry.updateBudget(
         departmentAddress,
         newBudgetWei
       );
-
       const receipt = await tx.wait();
+
+      // Log the activity
+      await this.logActivity(
+        departmentAddress,
+        "BUDGET_UPDATE",
+        newBudgetWei,
+        description,
+        receipt.hash,
+        "Completed"
+      );
 
       // Create a transaction record in BudgetController
       await this.budgetController.createTransaction(
@@ -559,6 +620,27 @@ export class DepartmentSystemActions {
     } catch (error) {
       console.error("Budget validation failed:", error);
       throw error;
+    }
+  }
+
+  // Add method to fetch recent activities
+  async getRecentActivities(department: string, limit: number = 10) {
+    try {
+      const activities = await this.activityTracker.getRecentActivities(
+        department,
+        limit
+      );
+      return activities.map((activity: any) => ({
+        type: activity.activityType,
+        amount: ethers.formatEther(activity.amount),
+        date: new Date(Number(activity.timestamp) * 1000).toISOString(),
+        status: activity.status,
+        txHash: activity.txHash,
+        description: activity.description,
+      }));
+    } catch (error) {
+      console.error("Failed to fetch recent activities:", error);
+      return [];
     }
   }
 }

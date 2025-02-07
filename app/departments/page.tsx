@@ -49,17 +49,21 @@ export default function DepartmentsPage() {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        if (typeof window.ethereum === "undefined") {
-          throw new Error("Please install MetaMask to continue");
-        }
-
-        await setupNetwork();
-        const provider = new ethers.BrowserProvider(window.ethereum as any);
-        const signer = await provider.getSigner();
+        const { provider, signer } =
+          await DepartmentSystemActions.connectWallet();
         const departmentSystem = new DepartmentSystemActions(provider, signer);
+        const deps = await departmentSystem.fetchAllDepartments();
 
-        const departments = await departmentSystem.fetchAllDepartments();
-        setDepartments(departments);
+        // Get ETH/USD rate and convert budgets
+        const ethRate = await departmentSystem.getEthToUsdRate();
+        const departmentsWithUsd = await Promise.all(
+          deps.map(async (dept) => ({
+            ...dept,
+            budgetUsd: await departmentSystem.convertEthToUsd(dept.budget),
+          }))
+        );
+
+        setDepartments(departmentsWithUsd);
       } catch (err) {
         console.error("Failed to fetch departments:", err);
         setError(
@@ -113,7 +117,7 @@ export default function DepartmentsPage() {
                 <DepartmentCard
                   key={i}
                   name={dept.name}
-                  budget={`${dept.budget} ETH`}
+                  budget={`${dept.budgetUsd}`}
                   projects={dept.projects.toString()}
                   utilization={dept.efficiency}
                   logo={dept.logoUri || "/images/default-department.png"}
