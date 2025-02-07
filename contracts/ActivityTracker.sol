@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-interface IActivityTracker {
+interface IDepartmentRegistry {
+    function superAdmins(address) external view returns (bool);
+    function departmentHeads(address) external view returns (bool);
+}
+
+contract ActivityTracker {
+    IDepartmentRegistry public departmentRegistry;
+
     struct Activity {
         uint256 id;
         address department;
@@ -9,35 +16,12 @@ interface IActivityTracker {
         uint256 amount;
         string description;
         uint256 timestamp;
-        address initiator;
-        bytes32 transactionHash;
-        bool success;
+        bytes32 txHash;
+        string status;
     }
 
-    function logActivity(
-        address department,
-        string memory activityType,
-        uint256 amount,
-        string memory description,
-        address initiator,
-        bytes32 transactionHash,
-        bool success
-    ) external;
-
-    function getDepartmentActivities(address department, uint256 limit, uint256 offset)
-        external
-        view
-        returns (Activity[] memory);
-
-    function getRecentActivities(address department, uint256 limit)
-        external
-        view
-        returns (Activity[] memory);
-}
-
-contract ActivityTracker is IActivityTracker {
     mapping(address => Activity[]) public departmentActivities;
-    mapping(address => uint256) public departmentActivityCount;
+    mapping(address => uint256) public activityCount;
     uint256 public totalActivities;
 
     event ActivityLogged(
@@ -46,20 +30,31 @@ contract ActivityTracker is IActivityTracker {
         string activityType,
         uint256 amount,
         string description,
-        address initiator,
-        bytes32 transactionHash,
-        bool success
+        bytes32 txHash,
+        string status
     );
+
+    constructor(address _departmentRegistry) {
+        departmentRegistry = IDepartmentRegistry(_departmentRegistry);
+    }
+
+    modifier onlyAuthorized() {
+        require(
+            departmentRegistry.superAdmins(msg.sender) ||
+            departmentRegistry.departmentHeads(msg.sender),
+            "Not authorized"
+        );
+        _;
+    }
 
     function logActivity(
         address department,
         string memory activityType,
         uint256 amount,
         string memory description,
-        address initiator,
-        bytes32 transactionHash,
-        bool success
-    ) external override {
+        bytes32 txHash,
+        string memory status
+    ) external onlyAuthorized {
         totalActivities++;
         uint256 activityId = totalActivities;
 
@@ -70,13 +65,12 @@ contract ActivityTracker is IActivityTracker {
             amount: amount,
             description: description,
             timestamp: block.timestamp,
-            initiator: initiator,
-            transactionHash: transactionHash,
-            success: success
+            txHash: txHash,
+            status: status
         });
 
         departmentActivities[department].push(newActivity);
-        departmentActivityCount[department]++;
+        activityCount[department]++;
 
         emit ActivityLogged(
             activityId,
@@ -84,39 +78,32 @@ contract ActivityTracker is IActivityTracker {
             activityType,
             amount,
             description,
-            initiator,
-            transactionHash,
-            success
+            txHash,
+            status
         );
     }
 
-    function getDepartmentActivities(
-        address department,
-        uint256 limit,
-        uint256 offset
-    ) public view override returns (Activity[] memory) {
-        uint256 totalCount = departmentActivityCount[department];
-        if (totalCount == 0 || offset >= totalCount) {
-            return new Activity[](0);
-        }
-
-        uint256 actualLimit = limit;
-        if (offset + limit > totalCount) {
-            actualLimit = totalCount - offset;
-        }
-
-        Activity[] memory activities = new Activity[](actualLimit);
-        for (uint256 i = 0; i < actualLimit; i++) {
-            activities[i] = departmentActivities[department][totalCount - offset - i - 1];
-        }
-
-        return activities;
+    function getDepartmentActivities(address department) 
+        external 
+        view 
+        returns (Activity[] memory) 
+    {
+        return departmentActivities[department];
     }
 
-    function getRecentActivities(
-        address department,
-        uint256 limit
-    ) external view override returns (Activity[] memory) {
-        return getDepartmentActivities(department, limit, 0);
+    function getRecentActivities(address department, uint256 limit) 
+        external 
+        view 
+        returns (Activity[] memory) 
+    {
+        uint256 count = activityCount[department];
+        uint256 resultCount = limit < count ? limit : count;
+        Activity[] memory result = new Activity[](resultCount);
+        
+        for (uint256 i = 0; i < resultCount; i++) {
+            result[i] = departmentActivities[department][count - 1 - i];
+        }
+        
+        return result;
     }
 } 

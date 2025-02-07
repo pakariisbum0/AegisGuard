@@ -1,10 +1,12 @@
 "use client";
 
 import { Space_Grotesk } from "next/font/google";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { ethers } from "ethers";
+import { DepartmentSystemActions, Department } from "@/lib/contracts/actions";
 import {
   Select,
   SelectTrigger,
@@ -19,21 +21,58 @@ export default function SignIn() {
   const router = useRouter();
   const [isConnecting, setIsConnecting] = useState(false);
   const [selectedRole, setSelectedRole] = useState("department");
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        setIsLoading(true);
+        const { provider, signer } =
+          await DepartmentSystemActions.connectWallet();
+        const departmentSystem = new DepartmentSystemActions(provider, signer);
+        const deps = await departmentSystem.fetchAllDepartments();
+
+        // Filter only active departments and sort by name
+        const activeDeps = deps
+          .filter((d) => d.isActive)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        console.log("Active departments:", activeDeps);
+        setDepartments(activeDeps);
+      } catch (err) {
+        console.error("Failed to fetch departments:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch departments"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
 
   const handleMetaMaskConnect = async () => {
     setIsConnecting(true);
-    try {
-      // Simulate connection delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    setError(null);
 
-      // Route based on selected role
-      if (selectedRole === "admin") {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/dashboard/department-of-defense");
-      }
+    try {
+      const { provider, signer } =
+        await DepartmentSystemActions.connectWallet();
+      const departmentSystem = new DepartmentSystemActions(provider, signer);
+
+      const { redirectPath } = await departmentSystem.authenticateUser(
+        selectedRole as "admin" | "department",
+        selectedRole === "department" ? selectedDepartment : undefined
+      );
+
+      router.push(redirectPath);
     } catch (error) {
       console.error("Failed to connect:", error);
+      setError(error instanceof Error ? error.message : "Failed to connect");
     } finally {
       setIsConnecting(false);
     }
@@ -70,7 +109,10 @@ export default function SignIn() {
               </label>
               <Select
                 value={selectedRole}
-                onValueChange={(value) => setSelectedRole(value)}
+                onValueChange={(value) => {
+                  setSelectedRole(value);
+                  setSelectedDepartment(""); // Reset department selection when role changes
+                }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select your role" />
@@ -82,7 +124,7 @@ export default function SignIn() {
               </Select>
             </div>
 
-            {/* Department Selection - Only show for department role */}
+            {/* Department Selection */}
             {selectedRole === "department" && (
               <div>
                 <label
@@ -91,29 +133,80 @@ export default function SignIn() {
                 >
                   Department
                 </label>
-                <Select defaultValue="dod">
+                <Select
+                  value={selectedDepartment}
+                  onValueChange={setSelectedDepartment}
+                  disabled={isLoading || departments.length === 0}
+                >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select department" />
+                    <SelectValue
+                      placeholder={
+                        isLoading
+                          ? "Loading departments..."
+                          : departments.length === 0
+                          ? "No departments available"
+                          : "Select department"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dod">Department of Defense</SelectItem>
-                    <SelectItem value="nasa">NASA</SelectItem>
-                    <SelectItem value="education">
-                      Department of Education
-                    </SelectItem>
-                    <SelectItem value="health">
-                      Department of Health & Human Services
-                    </SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.departmentHead} value={dept.name}>
+                        <div className="flex items-center gap-2">
+                          {dept.logoUri && (
+                            <Image
+                              src={dept.logoUri}
+                              alt={dept.name}
+                              width={20}
+                              height={20}
+                              className="rounded-full"
+                            />
+                          )}
+                          <span>{dept.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
 
-            {/* MetaMask Connect Button */}
+            {/* Error Message */}
+            {error && (
+              <div className="rounded-md bg-red-50 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">Error</h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>{error}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Connect Button */}
             <div>
               <button
                 onClick={handleMetaMaskConnect}
-                disabled={isConnecting}
+                disabled={
+                  isConnecting ||
+                  (selectedRole === "department" && !selectedDepartment) ||
+                  isLoading
+                }
                 className="w-full flex justify-center items-center gap-3 px-4 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300"
               >
                 <Image
