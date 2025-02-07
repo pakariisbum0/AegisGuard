@@ -1,6 +1,12 @@
+import { Dialog } from "@/components/ui/dialog";
+import {
+  Transaction,
+  TransactionType,
+  TransactionStatus,
+} from "@/lib/contracts/actions";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { DepartmentSystemActions, Transaction } from "@/lib/contracts/actions";
+import { DepartmentSystemActions } from "@/lib/contracts/actions";
 
 interface ProcessTransactionModalProps {
   isOpen: boolean;
@@ -17,19 +23,32 @@ export function ProcessTransactionModal({
 }: ProcessTransactionModalProps) {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const getTransactionTypeLabel = (type: TransactionType) => {
+    return type
+      .split("_")
+      .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(" ");
+  };
 
   const handleProcess = async () => {
-    setIsProcessing(true);
     try {
+      setError(null);
+      setIsProcessing(true);
+
       const { provider, signer } =
         await DepartmentSystemActions.connectWallet();
       const departmentSystem = new DepartmentSystemActions(provider, signer);
 
+      // Process the transaction
       const tx = await departmentSystem.processTransaction(
-        transaction.id,
-        description
+        parseInt(transaction.id),
+        notes
       );
+
+      // Wait for transaction to be mined
       await tx.wait();
 
       toast({
@@ -39,9 +58,11 @@ export function ProcessTransactionModal({
       });
 
       onSuccess();
-      onClose();
     } catch (error) {
       console.error("Failed to process transaction:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to process transaction"
+      );
       toast({
         title: "Error",
         description:
@@ -55,39 +76,105 @@ export function ProcessTransactionModal({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Process Transaction
-        </h2>
+    <div className={`fixed inset-0 z-50 ${isOpen ? "block" : "hidden"}`}>
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl p-6 max-w-lg w-full mx-4">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">
+            Process Transaction
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+            disabled={isProcessing}
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
         <div className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Transaction Type
-            </label>
-            <p className="text-gray-900">{transaction.type}</p>
+            <p className="text-sm text-gray-500">Transaction Details</p>
+            <div className="mt-2 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">ID:</span>
+                <span className="text-sm font-medium">#{transaction.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Type:</span>
+                <span className="text-sm font-medium">
+                  {getTransactionTypeLabel(transaction.type)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Amount:</span>
+                <span className="text-sm font-medium">
+                  {transaction.amount} ETH
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Department:</span>
+                <span className="text-sm font-medium">
+                  {transaction.department}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Status:</span>
+                <span className="text-sm font-medium">
+                  {transaction.status}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Date:</span>
+                <span className="text-sm font-medium">
+                  {new Date(transaction.timestamp).toLocaleString()}
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount
-            </label>
-            <p className="text-gray-900">{transaction.amount} ETH</p>
-          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description
             </label>
+            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+              {transaction.description}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Processing Notes
+            </label>
             <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={4}
-              placeholder="Enter additional notes (optional)"
+              placeholder="Add any notes or comments about this transaction (optional)"
+              disabled={isProcessing}
             />
           </div>
+
           <div className="flex justify-end gap-3 mt-6">
             <button
               type="button"
@@ -99,8 +186,10 @@ export function ProcessTransactionModal({
             </button>
             <button
               onClick={handleProcess}
+              disabled={
+                isProcessing || transaction.status !== TransactionStatus.PENDING
+              }
               className="px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
-              disabled={isProcessing}
             >
               {isProcessing ? (
                 <>

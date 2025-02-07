@@ -37,7 +37,12 @@ contract BudgetController {
         locked = false;
     }
 
-    enum TransactionType { BUDGET_ALLOCATION, PROJECT_FUNDING, BUDGET_UPDATE, EXPENSE }
+    enum TransactionType { 
+        BUDGET_ALLOCATION,
+        PROJECT_FUNDING,
+        BUDGET_UPDATE,
+        EXPENSE 
+    }
     enum TransactionStatus { PENDING, COMPLETED, FAILED }
 
     struct Transaction {
@@ -90,7 +95,7 @@ contract BudgetController {
         TransactionType txType,
         uint256 amount,
         string memory description
-    ) internal returns (uint256) {
+    ) public returns (uint256) {
         transactionCount++;
         uint256 transactionId = transactionCount;
         
@@ -233,5 +238,33 @@ contract BudgetController {
         departmentRegistry.updateDepartmentBudget(department, newBudget);
         
         emit BudgetUpdated(department, currentBudget, newBudget, transactionId);
+    }
+
+    function submitTransaction(
+        TransactionType txType,
+        uint256 amount,
+        string memory description
+    ) external onlyDepartmentHead returns (uint256) {
+        require(amount > 0 && amount <= MAX_TRANSACTION_AMOUNT, "Invalid amount");
+        
+        transactionCount++;
+        uint256 transactionId = transactionCount;
+        
+        transactions[transactionId] = Transaction({
+            id: transactionId,
+            department: msg.sender,
+            txType: txType,
+            amount: amount,
+            description: description,
+            status: TransactionStatus.PENDING,
+            timestamp: block.timestamp
+        });
+        
+        departmentTransactions[msg.sender].push(transactionId);
+        departmentTransactionCount[msg.sender]++;
+        
+        emit TransactionCreated(transactionId, msg.sender, txType, amount);
+        
+        return transactionId;
     }
 } 

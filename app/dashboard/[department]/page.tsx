@@ -41,6 +41,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { ProcessTransactionModal } from "@/app/components/ProcessTransactionModal";
+import { CreateTransactionModal } from "@/app/components/CreateTransactionModal";
 
 // import { useToast } from "@/components/ui/use-toast";
 
@@ -159,6 +160,11 @@ export default function DepartmentDashboard({
     useState<Transaction | null>(null);
   const [isProcessTransactionModalOpen, setIsProcessTransactionModalOpen] =
     useState(false);
+  const [pendingTransactions, setPendingTransactions] = useState<Transaction[]>(
+    []
+  );
+  const [isCreateTransactionModalOpen, setIsCreateTransactionModalOpen] =
+    useState(false);
 
   useEffect(() => {
     const fetchDepartmentDetails = async () => {
@@ -185,6 +191,29 @@ export default function DepartmentDashboard({
 
     fetchDepartmentDetails();
   }, [params.department]);
+
+  useEffect(() => {
+    const fetchPendingTransactions = async () => {
+      if (departmentData) {
+        try {
+          const { provider, signer } =
+            await DepartmentSystemActions.connectWallet();
+          const departmentSystem = new DepartmentSystemActions(
+            provider,
+            signer
+          );
+          const pending = await departmentSystem.getPendingTransactions(
+            departmentData.address
+          );
+          setPendingTransactions(pending);
+        } catch (error) {
+          console.error("Failed to fetch pending transactions:", error);
+        }
+      }
+    };
+
+    fetchPendingTransactions();
+  }, [departmentData]);
 
   if (loading) {
     return (
@@ -748,6 +777,48 @@ export default function DepartmentDashboard({
     }
   };
 
+  // Add this section to your dashboard UI
+  const PendingTransactions = () => (
+    <div className="bg-white rounded-xl p-6 border border-gray-100">
+      <h2
+        className={`text-xl font-bold text-gray-900 mb-6 ${spaceGrotesk.className}`}
+      >
+        Pending Transactions
+      </h2>
+      <div className="space-y-4">
+        {pendingTransactions.length > 0 ? (
+          pendingTransactions.map((tx) => (
+            <div key={tx.id} className="p-4 border border-gray-100 rounded-lg">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-medium text-gray-900">
+                    {tx.type} #{tx.id}
+                  </h3>
+                  <p className="text-sm text-gray-500">{tx.description}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedTransaction(tx);
+                    setIsProcessTransactionModalOpen(true);
+                  }}
+                  className="px-3 py-1 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800"
+                >
+                  Process
+                </button>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Amount</span>
+                <span className="font-medium">{tx.amount} ETH</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-500">No pending transactions</p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Header />
@@ -1083,7 +1154,7 @@ export default function DepartmentDashboard({
                     },
 
                     {
-                      name: "Process Transaction",
+                      name: "Create Transaction",
                       icon: (
                         <svg
                           className="w-5 h-5"
@@ -1099,7 +1170,7 @@ export default function DepartmentDashboard({
                           />
                         </svg>
                       ),
-                      action: () => setIsProcessTransactionModalOpen(true),
+                      action: () => setIsCreateTransactionModalOpen(true),
                     },
                   ].map((action) => (
                     <button
@@ -1118,6 +1189,9 @@ export default function DepartmentDashboard({
 
               {/* Recent Activity */}
               <RecentActivity />
+
+              {/* Pending Transactions */}
+              <PendingTransactions />
             </div>
           </div>
         </div>
@@ -1423,12 +1497,41 @@ export default function DepartmentDashboard({
       {isNewProjectModalOpen && <NewProjectModal />}
 
       {/* Add Process Transaction Modal */}
-      {selectedTransaction && (
+      {isProcessTransactionModalOpen && selectedTransaction && (
         <ProcessTransactionModal
           isOpen={isProcessTransactionModalOpen}
-          onClose={() => setIsProcessTransactionModalOpen(false)}
+          onClose={() => {
+            setIsProcessTransactionModalOpen(false);
+            setSelectedTransaction(null);
+          }}
           transaction={selectedTransaction}
-          onSuccess={handleTransactionProcessed}
+          onSuccess={() => {
+            handleTransactionProcessed();
+            setIsProcessTransactionModalOpen(false);
+            setSelectedTransaction(null);
+          }}
+        />
+      )}
+
+      {/* Add Create Transaction Modal */}
+      {departmentData && (
+        <CreateTransactionModal
+          isOpen={isCreateTransactionModalOpen}
+          onClose={() => setIsCreateTransactionModalOpen(false)}
+          departmentAddress={departmentData.address}
+          onSuccess={async () => {
+            // Refresh pending transactions
+            const { provider, signer } =
+              await DepartmentSystemActions.connectWallet();
+            const departmentSystem = new DepartmentSystemActions(
+              provider,
+              signer
+            );
+            const pending = await departmentSystem.getPendingTransactions(
+              departmentData.address
+            );
+            setPendingTransactions(pending);
+          }}
         />
       )}
     </>

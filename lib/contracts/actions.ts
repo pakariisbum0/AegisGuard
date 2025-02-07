@@ -13,11 +13,19 @@ const CONTRACT_ADDRESSES = {
   ACTIVITY_TRACKER: "0x3Bc23103bd1862F8E8EA02104d7b39B30f487f10",
 } as const;
 
-export type TransactionType =
-  | "BUDGET_ALLOCATION"
-  | "PROJECT_FUNDING"
-  | "BUDGET_UPDATE"
-  | "EXPENSE";
+export enum TransactionType {
+  BUDGET_ALLOCATION = "BUDGET_ALLOCATION",
+  PROJECT_FUNDING = "PROJECT_FUNDING",
+  BUDGET_UPDATE = "BUDGET_UPDATE",
+  EXPENSE = "EXPENSE",
+}
+
+export enum TransactionStatus {
+  PENDING = "PENDING",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+}
+
 export type ProposalStatus =
   | "PENDING"
   | "UNDER_REVIEW"
@@ -85,13 +93,15 @@ interface PriceResponse {
 
 // Add these interfaces near other interfaces
 export interface Transaction {
-  id: number;
-  type: "BUDGET_ALLOCATION" | "PROJECT_FUNDING" | "BUDGET_UPDATE" | "EXPENSE";
+  id: string;
+  department: string;
+  type: TransactionType;
   amount: string;
   description: string;
-  status: "PENDING" | "COMPLETED" | "FAILED";
-  timestamp: number;
-  txHash?: string;
+  status: TransactionStatus;
+  timestamp: string;
+  from?: string;
+  to?: string;
 }
 
 export class DepartmentSystemActions {
@@ -185,13 +195,19 @@ export class DepartmentSystemActions {
 
   async processTransaction(
     transactionId: number,
-    description: string = ""
+    notes: string = ""
   ): Promise<ethers.ContractTransactionResponse> {
     try {
       // Get transaction details first
       const transaction = await this.budgetController.getTransaction(
         transactionId
       );
+
+      // Validate transaction status
+      if (transaction.status !== 0) {
+        // 0 = PENDING
+        throw new Error("Transaction is not in pending status");
+      }
 
       // Process the transaction
       const tx = await this.budgetController.processTransaction(transactionId);
@@ -201,7 +217,7 @@ export class DepartmentSystemActions {
         transaction.department,
         `Process Transaction #${transactionId}`,
         transaction.amount,
-        description || transaction.description,
+        notes || transaction.description,
         tx.hash,
         "Completed"
       );
@@ -698,18 +714,13 @@ export class DepartmentSystemActions {
     try {
       const tx = await this.budgetController.getTransaction(transactionId);
       return {
-        id: transactionId,
-        type: [
-          "BUDGET_ALLOCATION",
-          "PROJECT_FUNDING",
-          "BUDGET_UPDATE",
-          "EXPENSE",
-        ][tx.txType],
+        id: transactionId.toString(),
+        department: tx.department,
+        type: TransactionType[tx.txType],
         amount: ethers.formatEther(tx.amount),
-        description: tx.description,
-        status: ["PENDING", "COMPLETED", "FAILED"][tx.status],
-        timestamp: Number(tx.timestamp),
-        txHash: tx.txHash,
+        description: tx.description || "",
+        status: TransactionStatus[tx.status],
+        timestamp: tx.timestamp.toString(),
       };
     } catch (error) {
       console.error("Failed to get transaction details:", error);
@@ -719,25 +730,44 @@ export class DepartmentSystemActions {
 
   async getPendingTransactions(department: string): Promise<Transaction[]> {
     try {
-      const transactions = await this.budgetController.getPendingTransactions(
-        department
-      );
-      return transactions.map((tx: any, index: number) => ({
-        id: index,
-        type: [
-          "BUDGET_ALLOCATION",
-          "PROJECT_FUNDING",
-          "BUDGET_UPDATE",
-          "EXPENSE",
-        ][tx.txType],
-        amount: ethers.formatEther(tx.amount),
-        description: tx.description,
-        status: ["PENDING", "COMPLETED", "FAILED"][tx.status],
-        timestamp: Number(tx.timestamp),
-        txHash: tx.txHash,
-      }));
+      const transactions =
+        await this.budgetController.getTransactionsByDepartment(department);
+      return transactions
+        .filter((tx: any) => tx.status === 0) // Filter PENDING transactions
+        .map((tx: any) => ({
+          id: tx.id.toString(),
+          department: tx.department,
+          type: TransactionType[tx.txType],
+          amount: ethers.formatEther(tx.amount),
+          description: tx.description,
+          status: TransactionStatus[tx.status],
+          timestamp: new Date(Number(tx.timestamp) * 1000).toISOString(),
+          from: tx.department,
+          to: tx.department, // In real implementation, this would be the recipient
+        }));
     } catch (error) {
       console.error("Failed to get pending transactions:", error);
+      throw error;
+    }
+  }
+
+  // Add this method to DepartmentSystemActions class
+  async createPendingTransaction(
+    department: string,
+    type: TransactionType,
+    amount: string,
+    description: string
+  ): Promise<ethers.ContractTransactionResponse> {
+    try {
+      const amountWei = ethers.parseEther(amount);
+      const tx = await this.budgetController.submitTransaction(
+        Object.values(TransactionType).indexOf(type),
+        amountWei,
+        description
+      );
+      return tx;
+    } catch (error) {
+      console.error("Failed to create transaction:", error);
       throw error;
     }
   }
