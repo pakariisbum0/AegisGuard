@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/BudgetController.sol": {
-      "lastModificationDate": 1738924811874,
-      "contentHash": "66eed6683dbfbbfc1c1d19731dad1d9a",
+      "lastModificationDate": 1738953092167,
+      "contentHash": "de66ffbc1b61e363deee0da1b9454fbf",
       "sourceName": "contracts/BudgetController.sol",
       "solcConfig": {
         "version": "0.8.28",

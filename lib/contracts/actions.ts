@@ -493,12 +493,20 @@ export class DepartmentSystemActions {
       // Convert ETH amount to Wei
       const newBudgetWei = ethers.parseEther(newBudgetEth);
 
-      // Create and wait for the transaction
-      const tx = await this.budgetController.updateDepartmentBudget(
+      // Call updateBudget on the DepartmentRegistry contract instead of BudgetController
+      const tx = await this.departmentRegistry.updateBudget(
         departmentAddress,
         newBudgetWei
       );
+
       const receipt = await tx.wait();
+
+      // Create a transaction record in BudgetController
+      await this.budgetController.createTransaction(
+        2, // TransactionType.BUDGET_UPDATE
+        newBudgetWei,
+        description
+      );
 
       // Fetch updated department details to confirm the change
       const updatedDetails = await this.getDepartmentDetails(departmentAddress);
