@@ -1520,17 +1520,34 @@ export default function DepartmentDashboard({
           onClose={() => setIsCreateTransactionModalOpen(false)}
           departmentAddress={departmentData.address}
           onSuccess={async () => {
-            // Refresh pending transactions
-            const { provider, signer } =
-              await DepartmentSystemActions.connectWallet();
-            const departmentSystem = new DepartmentSystemActions(
-              provider,
-              signer
-            );
-            const pending = await departmentSystem.getPendingTransactions(
-              departmentData.address
-            );
-            setPendingTransactions(pending);
+            try {
+              // Refresh pending transactions
+              const { provider, signer } =
+                await DepartmentSystemActions.connectWallet();
+              const departmentSystem = new DepartmentSystemActions(
+                provider,
+                signer
+              );
+              const pending = await departmentSystem.getPendingTransactions(
+                departmentData.address
+              );
+              setPendingTransactions(pending);
+
+              // Show success toast
+              toast({
+                title: "Transaction Created",
+                description: "Your transaction has been created successfully.",
+                variant: "default",
+              });
+            } catch (error) {
+              console.error("Failed to refresh transactions:", error);
+              toast({
+                title: "Warning",
+                description:
+                  "Transaction created but failed to refresh the list. Please refresh the page.",
+                variant: "destructive",
+              });
+            }
           }}
         />
       )}

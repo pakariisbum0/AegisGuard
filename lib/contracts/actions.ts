@@ -104,11 +104,31 @@ export interface Transaction {
   to?: string;
 }
 
+// Add this interface to match the contract's transaction functions
+interface IBudgetController {
+  submitTransaction(
+    txType: number,
+    amount: bigint,
+    description: string
+  ): Promise<ethers.ContractTransactionResponse>;
+  getTransactionsByDepartment(department: string): Promise<
+    Array<{
+      id: bigint;
+      department: string;
+      txType: number;
+      amount: bigint;
+      description: string;
+      status: number;
+      timestamp: bigint;
+    }>
+  >;
+}
+
 export class DepartmentSystemActions {
   private provider: ethers.Provider;
   private signer: ethers.Signer;
   private departmentRegistry: ethers.Contract;
-  private budgetController: ethers.Contract;
+  private budgetController: IBudgetController & ethers.Contract;
   private proposalManager: ethers.Contract;
   private activityTracker: ethers.Contract;
 
@@ -124,9 +144,13 @@ export class DepartmentSystemActions {
 
     this.budgetController = new ethers.Contract(
       CONTRACT_ADDRESSES.BUDGET_CONTROLLER,
-      BudgetControllerABI.abi,
+      [
+        // Add only the functions we need
+        "function submitTransaction(uint8 txType, uint256 amount, string description) external returns (uint256)",
+        "function getTransactionsByDepartment(address department) external view returns (tuple(uint256 id, address department, uint8 txType, uint256 amount, string description, uint8 status, uint256 timestamp)[])",
+      ],
       signer
-    );
+    ) as IBudgetController & ethers.Contract;
 
     this.proposalManager = new ethers.Contract(
       CONTRACT_ADDRESSES.PROPOSAL_MANAGER,
@@ -760,15 +784,30 @@ export class DepartmentSystemActions {
   ): Promise<ethers.ContractTransactionResponse> {
     try {
       const amountWei = ethers.parseEther(amount);
+
+      // Convert TransactionType to number index
+      const txTypeIndex = Object.values(TransactionType).indexOf(type);
+
       const tx = await this.budgetController.submitTransaction(
-        Object.values(TransactionType).indexOf(type),
+        txTypeIndex,
         amountWei,
         description
       );
+
+      // Log the activity after successful transaction creation
+      await this.logActivity(
+        department,
+        type,
+        amountWei,
+        description,
+        tx.hash,
+        "Pending"
+      );
+
       return tx;
     } catch (error) {
       console.error("Failed to create transaction:", error);
-      throw error;
+      throw new Error(`Transaction creation failed: ${error.message}`);
     }
   }
 }

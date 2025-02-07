@@ -39,6 +39,14 @@ export function CreateTransactionModal({
         throw new Error("Please enter a valid amount greater than 0");
       }
 
+      // Log available methods before attempting the transaction
+      console.log("Attempting to create transaction:", {
+        department: departmentAddress,
+        type: formData.type,
+        amount: formData.amount,
+        description: formData.description,
+      });
+
       const tx = await departmentSystem.createPendingTransaction(
         departmentAddress,
         formData.type,
@@ -58,13 +66,10 @@ export function CreateTransactionModal({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Failed to create transaction:", error);
+      console.error("Transaction creation failed:", error);
       toast({
         title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to create transaction. Please make sure you have the right permissions.",
+        description: "Failed to create transaction. Please try again later.",
         variant: "destructive",
       });
     } finally {
