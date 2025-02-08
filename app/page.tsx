@@ -179,7 +179,7 @@ export default function Home() {
               name: dept.name,
               budget: await departmentSystem.convertEthToUsd(dept.budget),
               projects: approvedProjects,
-              utilization: dept.efficiency + "%",
+              utilization: dept.efficiency,
               logo: dept.logoUri || "/images/default-department.png",
               proposals: processedProposals,
             };
