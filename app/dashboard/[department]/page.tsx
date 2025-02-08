@@ -123,6 +123,56 @@ const getActivityStyles = (activity: ActivityItem) => {
   return styles[activity.category || "transfer"];
 };
 
+// Add this helper function at the top with other helpers
+const formatTimeAgo = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  // Less than a minute
+  if (seconds < 60) {
+    return "just now";
+  }
+
+  // Less than an hour
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+
+  // Less than a day
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  // Less than a week
+  const days = Math.floor(hours / 24);
+  if (days < 7) {
+    return `${days}d ago`;
+  }
+
+  // Otherwise return short date
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// Update the getStatusColor function
+const getStatusColor = (status: string): string => {
+  switch (status.toLowerCase()) {
+    case "approved":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case "pending":
+      return "bg-yellow-50 text-yellow-700 border-yellow-200";
+    case "rejected":
+      return "bg-red-50 text-red-700 border-red-200";
+    default:
+      return "bg-gray-50 text-gray-700 border-gray-200";
+  }
+};
+
 export default function DepartmentDashboard({
   params,
 }: {
@@ -148,6 +198,8 @@ export default function DepartmentDashboard({
     reason: "",
     category: "operational",
   });
+
+  console.log("departmentData", departmentData);
   const [formErrors, setFormErrors] = useState<Partial<ProposalForm>>({});
   const [isUpdateBudgetModalOpen, setIsUpdateBudgetModalOpen] = useState(false);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -519,138 +571,63 @@ export default function DepartmentDashboard({
   };
 
   // Update the Recent Activity section in the component
-  const RecentActivity = () => {
-    return (
-      <div className="bg-white rounded-xl p-6 border border-gray-100 max-w-full overflow-hidden">
-        <div className="flex justify-between items-center mb-6">
-          <h2
-            className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+  const RecentActivity = () => (
+    <div className="bg-white rounded-xl p-6 border border-gray-100">
+      <h2
+        className={`text-xl font-bold text-gray-900 mb-6 ${spaceGrotesk.className}`}
+      >
+        Recent Activity
+      </h2>
+      <div className="space-y-4">
+        {departmentData.recentActivity.map((activity, index) => (
+          <div
+            key={index}
+            className="flex items-start gap-4 p-4 border border-gray-100 rounded-lg"
           >
-            Recent Activity
-          </h2>
-          <div className="flex items-center gap-3 text-sm text-gray-500">
-            <span className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-              Completed
-            </span>
-            <span className="w-px h-4 bg-gray-200" />
-            <span className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
-              Pending
-            </span>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {departmentData.recentActivity?.map((activity: ActivityItem, i) => {
-            const styles = getActivityStyles(activity);
-
-            return (
+            <div className="flex-shrink-0">
               <div
-                key={i}
-                className="group p-4 hover:bg-gray-50 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200"
+                className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  getActivityStyles(activity).bgColor
+                }`}
               >
-                <div className="flex items-start gap-4">
-                  {/* Icon Column */}
-                  <div
-                    className={`p-2 rounded-full shrink-0 ${styles.bgColor}`}
-                  >
-                    {styles.icon}
-                  </div>
-
-                  {/* Content Column */}
-                  <div className="flex-1 min-w-0">
-                    {/* Title and Status Row */}
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <h3 className="font-medium text-gray-900 truncate">
-                        {activity.type}
-                      </h3>
-                      <span
-                        className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
-                          activity.status === "Completed"
-                            ? "bg-emerald-50 text-emerald-600"
-                            : "bg-yellow-50 text-yellow-600"
-                        }`}
-                      >
-                        {activity.status === "Completed" ? (
-                          <CheckCircle2 size={12} />
-                        ) : (
-                          <AlertCircle size={12} />
-                        )}
-                        {activity.status}
-                      </span>
-                    </div>
-
-                    {/* Amount Row */}
-                    <div className="text-sm font-medium text-gray-900 mb-1.5">
-                      {activity.amount}
-                    </div>
-
-                    {/* Wallet Info Row */}
-                    {(activity.from || activity.to) && (
-                      <div className="flex items-center gap-2 mb-1.5 text-sm text-gray-500">
-                        <Wallet size={14} className="shrink-0" />
-                        <span className="truncate">
-                          {activity.from && (
-                            <span className="inline-flex items-center gap-1">
-                              From: {activity.from.slice(0, 6)}...
-                              {activity.from.slice(-4)}
-                            </span>
-                          )}
-                          {activity.to && (
-                            <span className="inline-flex items-center gap-1">
-                              {activity.from && " • "}
-                              To: {activity.to.slice(0, 6)}...
-                              {activity.to.slice(-4)}
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Transaction Info Row */}
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={14} className="shrink-0" />
-                        <span>{activity.date}</span>
-                      </div>
-                      <span className="w-1 h-1 rounded-full bg-gray-300" />
-                      <a
-                        href={`https://etherscan.io/tx/${activity.txHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 hover:text-gray-700 transition-colors group-hover:underline"
-                      >
-                        <span className="truncate">
-                          {activity.txHash.slice(0, 6)}...
-                          {activity.txHash.slice(-4)}
-                        </span>
-                        <ExternalLink
-                          size={12}
-                          className="shrink-0 opacity-50 group-hover:opacity-100"
-                        />
-                      </a>
-                    </div>
-                  </div>
-                </div>
+                {getActivityStyles(activity).icon}
               </div>
-            );
-          }) || (
-            <div className="text-center py-12 px-4">
-              <div className="bg-gray-50 rounded-full w-12 h-12 mx-auto flex items-center justify-center mb-4">
-                <Clock className="w-6 h-6 text-gray-400" />
-              </div>
-              <h3 className="text-sm font-medium text-gray-900 mb-1">
-                No Recent Activity
-              </h3>
-              <p className="text-sm text-gray-500">
-                New transactions and updates will appear here
-              </p>
             </div>
-          )}
-        </div>
+            <div className="flex-grow">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium text-gray-900">{activity.type}</p>
+                  <p className="text-sm text-gray-500">{activity.amount}</p>
+                </div>
+                <span className="text-sm text-gray-500">
+                  {formatTimeAgo(activity.date)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <span
+                  className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                    activity.status === "Completed"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-yellow-50 text-yellow-700"
+                  }`}
+                >
+                  {activity.status}
+                </span>
+                <Link
+                  href={`https://etherscan.io/tx/${activity.txHash}`}
+                  target="_blank"
+                  className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                >
+                  View Transaction
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
-    );
-  };
+    </div>
+  );
 
   // Add this modal component near the end of the file
   const NewProjectModal = () => (
@@ -863,162 +840,194 @@ export default function DepartmentDashboard({
     }
   };
 
-  // Add this section to your dashboard UI
-  const PendingTransactions = () => (
-    <div className="bg-white rounded-xl p-6 border border-gray-100">
-      <h2
-        className={`text-xl font-bold text-gray-900 mb-6 ${spaceGrotesk.className}`}
-      >
-        Pending Transactions
-      </h2>
-      <div className="space-y-4">
-        {pendingTransactions.length > 0 ? (
-          pendingTransactions.map((tx) => (
-            <div key={tx.id} className="p-4 border border-gray-100 rounded-lg">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-medium text-gray-900">
-                    {tx.type} #{tx.id}
-                  </h3>
-                  <p className="text-sm text-gray-500">{tx.description}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedTransaction(tx);
-                    setIsProcessTransactionModalOpen(true);
-                  }}
-                  className="px-3 py-1 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800"
-                >
-                  Process
-                </button>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Amount</span>
-                <span className="font-medium">{tx.amount} ETH</span>
-              </div>
+  // Update the metrics grid to show USD values and correct project count
+  const MetricsGrid = () => (
+    <div className="grid grid-cols-4 gap-6 mb-12">
+      {[
+        {
+          label: "Total Budget",
+          value: departmentData.budget.usd,
+          icon: Wallet,
+        },
+        {
+          label: "Active Projects",
+          value: metrics?.approvedProposals || "0",
+          icon: FolderGit2,
+        },
+        {
+          label: "Budget Utilized",
+          value: `${budgetData?.efficiency || 0}%`,
+          icon: BarChart3,
+        },
+        {
+          label: "Pending Proposals",
+          value: metrics?.pendingProposals || "0",
+          icon: FileCheck,
+        },
+      ].map((stat) => (
+        <div
+          key={stat.label}
+          className="bg-white rounded-xl p-6 border border-gray-100"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-2 rounded-lg bg-gray-50">
+              <stat.icon className="w-5 h-5 text-gray-600" />
             </div>
-          ))
-        ) : (
-          <p className="text-center text-gray-500">No pending transactions</p>
-        )}
-      </div>
+          </div>
+          <p className="text-sm text-gray-500">{stat.label}</p>
+          <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+        </div>
+      ))}
     </div>
   );
 
-  // Update the Budget Overview section to use real data
-  const BudgetOverview = () => (
-    <div className="bg-white rounded-xl p-6 border border-gray-100">
-      <div className="flex justify-between items-center mb-6">
-        <h2
-          className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
-        >
-          Budget Overview
-        </h2>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="w-3 h-3 rounded-full bg-black" />
-            <span className="text-gray-600">Allocated</span>
+  // Update the BudgetOverview component
+  const BudgetOverview = () => {
+    // Calculate monthly budget data
+    const calculateMonthlyData = () => {
+      const currentDate = new Date();
+      const months = [];
+      const usdRate = 3000; // Using the same rate as formatUsdValue
+
+      // Get total budget and spent values in USD
+      const totalBudgetEth = Number(
+        departmentData.budget.eth.replace(" ETH", "")
+      );
+      const totalBudgetUsd = totalBudgetEth * usdRate;
+      const totalSpentUsd =
+        (totalBudgetUsd * (budgetData?.efficiency || 0)) / 100;
+
+      // Only show February data
+      for (let i = 7; i >= 0; i--) {
+        const date = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth() - i,
+          1
+        );
+        const monthName = date.toLocaleString("default", { month: "short" });
+
+        months.push({
+          month: monthName,
+          allocated: monthName === "Feb" ? totalBudgetUsd : 0, // Only show budget for February
+          spent: monthName === "Feb" ? totalSpentUsd : 0, // Only show spent for February
+        });
+      }
+      return months;
+    };
+
+    const data = calculateMonthlyData();
+
+    return (
+      <div className="bg-white rounded-xl p-6 border border-gray-100">
+        <div className="flex justify-between items-center mb-6">
+          <h2
+            className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+          >
+            Budget Overview
+          </h2>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="w-3 h-3 rounded-full bg-black" />
+              <span className="text-gray-600">Allocated</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="w-3 h-3 rounded-full bg-gray-400" />
+              <span className="text-gray-600">Spent</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="w-3 h-3 rounded-full bg-gray-400" />
-            <span className="text-gray-600">Spent</span>
-          </div>
-          <Select defaultValue="8months">
-            <SelectTrigger className="w-[180px] text-sm border-gray-200 bg-white">
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="8months">Last 8 Months</SelectItem>
-              <SelectItem value="12months">Last 12 Months</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
-      </div>
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={budgetData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis
-              dataKey="month"
-              tick={{ fill: "#6B7280" }}
-              axisLine={{ stroke: "#E5E7EB" }}
-            />
-            <YAxis
-              tick={{ fill: "#6B7280" }}
-              axisLine={{ stroke: "#E5E7EB" }}
-              tickFormatter={(value) => `$${value}B`}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "white",
-                border: "1px solid #E5E7EB",
-                borderRadius: "0.5rem",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-              }}
-              formatter={(value) => [`$${value}B`, ""]}
-            />
-            <Bar
-              dataKey="allocated"
-              fill="#000000"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={40}
-            />
-            <Bar
-              dataKey="spent"
-              fill="#9CA3AF"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={40}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-4">
-        {[
-          {
-            label: "Total Allocated",
-            value: budgetData?.allocated || "0",
-            change: "+0%",
-            trend: "up",
-          },
-          {
-            label: "Total Spent",
-            value: budgetData?.spent || "0",
-            change: "+0%",
-            trend: "up",
-          },
-          {
-            label: "Efficiency Rate",
-            value: `${budgetData?.efficiency || 0}%`,
-            change: "+0%",
-            trend: "up",
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-gray-50 rounded-lg p-4 border border-gray-100"
-          >
-            <p className="text-sm text-gray-500">{stat.label}</p>
-            <div className="flex items-center gap-2 mt-1">
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: "#6B7280", fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fill: "#6B7280", fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "0.5rem",
+                }}
+                formatter={(value: number) => [
+                  `$${new Intl.NumberFormat("en-US").format(value)}`,
+                  "",
+                ]}
+              />
+              <Bar
+                dataKey="allocated"
+                fill="#111827"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={40}
+              />
+              <Bar
+                dataKey="spent"
+                fill="#9CA3AF"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={40}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          {[
+            {
+              label: "Total Allocated",
+              value: departmentData.budget.usd,
+            },
+            {
+              label: "Total Spent",
+              value: formatUsdValue(
+                (
+                  (Number(departmentData.budget.eth.replace(" ETH", "")) *
+                    (budgetData?.efficiency || 0)) /
+                  100
+                ).toString()
+              ),
+            },
+            {
+              label: "Efficiency Rate",
+              value: `${budgetData?.efficiency || 0}%`,
+            },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+            >
+              <p className="text-sm text-gray-500">{stat.label}</p>
               <p className="text-lg font-semibold text-gray-900">
                 {stat.value}
               </p>
-              <span
-                className={`text-xs font-medium ${
-                  stat.trend === "up" ? "text-emerald-600" : "text-red-600"
-                }`}
-              >
-                {stat.change}
-              </span>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  // Add a helper function to format USD values
+  const formatUsdValue = (ethAmount: string): string => {
+    const usdRate = 3000; // You can replace this with actual rate from your API
+    const usdValue = parseFloat(ethAmount) * usdRate;
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(usdValue);
+  };
 
   return (
     <>
@@ -1096,32 +1105,7 @@ export default function DepartmentDashboard({
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {/* Quick Stats */}
-          <div className="grid grid-cols-4 gap-6 mb-12">
-            {[
-              { label: "Total Budget", value: departmentData.budget.usd },
-              {
-                label: "Active Projects",
-                value: departmentData.projects.toString(),
-              },
-              { label: "Budget Utilized", value: departmentData.utilization },
-              {
-                label: "Pending Proposals",
-                value: (
-                  departmentData.activeProposals?.filter((p) =>
-                    ["pending", "review"].includes(p.status.toLowerCase())
-                  )?.length || 0
-                ).toString(),
-              },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="bg-white rounded-xl p-6 border border-gray-100"
-              >
-                <p className="text-sm text-gray-500">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-            ))}
-          </div>
+          <MetricsGrid />
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-3 gap-8">
@@ -1143,32 +1127,38 @@ export default function DepartmentDashboard({
                   </button>
                 </div>
                 <div className="space-y-4">
-                  {departmentData.activeProposals?.map((project, i) => (
+                  {departmentData.activeProposals.map((project, index) => (
                     <div
-                      key={i}
-                      className="p-4 border border-gray-100 rounded-lg hover:border-gray-200"
+                      key={index}
+                      className="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-all duration-200"
                     >
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-medium text-gray-900">
                             {project.title}
                           </h3>
                           <p className="text-sm text-gray-500">
-                            Submitted {project.submittedDate}
+                            Submitted {formatTimeAgo(project.submittedDate)}
                           </p>
                         </div>
-                        <span className="px-2 py-1 text-xs rounded-full bg-yellow-50 text-yellow-600">
+                        <span
+                          className={`px-2.5 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(
+                            project.status
+                          )}`}
+                        >
                           {project.status}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Budget</span>
-                        <span className="font-medium text-gray-900">
-                          {project.amount}
-                        </span>
+                      <div className="mt-3 flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Amount:</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {project.amount}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  )) || <p className="text-gray-500">No active projects</p>}
+                  ))}
                 </div>
               </div>
             </div>
@@ -1280,7 +1270,7 @@ export default function DepartmentDashboard({
               <RecentActivity />
 
               {/* Pending Transactions */}
-              <PendingTransactions />
+              {/* <PendingTransactions /> */}
             </div>
           </div>
         </div>
