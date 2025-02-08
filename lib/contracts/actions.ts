@@ -104,12 +104,25 @@ export interface Transaction {
   to?: string;
 }
 
-// Add this interface
-interface MonthlyBudget {
-  timestamp: number;
-  allocated: number;
-  spent: number;
-}
+// Add this interface to match the contract's transaction functions
+// interface IBudgetController {
+//   createTransaction(
+//     txType: number,
+//     amount: bigint,
+//     description: string
+//   ): Promise<ethers.ContractTransactionResponse>;
+//   getTransactionsByDepartment(department: string): Promise<
+//     Array<{
+//       id: bigint;
+//       department: string;
+//       txType: number;
+//       amount: bigint;
+//       description: string;
+//       status: number;
+//       timestamp: bigint;
+//     }>
+//   >;
+// }
 
 export class DepartmentSystemActions {
   private provider: ethers.Provider;
@@ -281,68 +294,7 @@ export class DepartmentSystemActions {
   }
 
   async getProposalsByDepartment(department: string) {
-    try {
-      console.log("=== Getting Department Proposals ===");
-      console.log("Department Address:", department);
-
-      const proposals = await this.proposalManager.getProposalsByDepartment(
-        department
-      );
-      console.log("Raw proposals from contract:", proposals);
-
-      // Map and filter the proposals
-      const mappedProposals = proposals.map((p: any) => {
-        // Log raw status value
-        console.log("Raw proposal status:", {
-          id: p.id.toString(),
-          rawStatus: p.status,
-          mappedStatus: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][
-            Number(p.status) || 0
-          ],
-        });
-
-        // Safely handle timestamp conversion
-        let submittedDate;
-        try {
-          const timestamp = Number(p.timestamp) * 1000;
-          submittedDate = new Date(timestamp).toISOString();
-        } catch (error) {
-          submittedDate = new Date().toISOString();
-        }
-
-        // Parse the description JSON if it exists
-        let parsedDescription;
-        let category = "";
-        try {
-          parsedDescription = JSON.parse(p.description);
-          category = parsedDescription.category || "";
-        } catch (error) {
-          parsedDescription = { description: p.description };
-        }
-
-        const status = ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][
-          Number(p.status) || 0
-        ];
-
-        return {
-          id: p.id.toString(),
-          title: p.title || "Untitled Proposal",
-          amount: ethers.formatEther(p.amount || 0),
-          status,
-          description: parsedDescription.description || "",
-          timeline: parsedDescription.timeline || "",
-          objectives: parsedDescription.objectives || "",
-          category: category,
-          submittedDate,
-        };
-      });
-
-      console.log("Mapped proposals with statuses:", mappedProposals);
-      return mappedProposals;
-    } catch (error) {
-      console.error("Failed to get proposals:", error);
-      throw error;
-    }
+    return this.proposalManager.getProposalsByDepartment(department);
   }
 
   async addProposalComment(proposalId: number, comment: string) {
@@ -533,6 +485,8 @@ export class DepartmentSystemActions {
     try {
       const rate = await this.getEthToUsdRate();
       const usdAmount = parseFloat(ethAmount) * rate;
+
+      // Format with proper currency notation
       return new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
@@ -796,58 +750,21 @@ export class DepartmentSystemActions {
 
   async getPendingTransactions(department: string): Promise<Transaction[]> {
     try {
-      console.log("=== Getting Pending Transactions ===");
-      console.log("Department Address:", department);
-
       const transactions =
         await this.budgetController.getTransactionsByDepartment(department);
-      console.log("Raw transactions from contract:", transactions);
-
-      // Log the TransactionStatus enum values
-      console.log("TransactionStatus.PENDING =", TransactionStatus.PENDING);
-
-      const pending = transactions
-        .filter((tx: any) => {
-          console.log(
-            "Transaction status:",
-            tx.status,
-            "Type:",
-            typeof tx.status
-          );
-          // Check if the transaction is pending (status should be 0)
-          return Number(tx.status) === 0;
-        })
-        .map((tx: any) => {
-          // Safely handle timestamp conversion
-          let timestamp;
-          try {
-            // Ensure timestamp is treated as milliseconds
-            const txTimestamp = Number(tx.timestamp) * 1000; // Convert seconds to milliseconds
-            timestamp = new Date(txTimestamp).toISOString();
-          } catch (error) {
-            console.warn(
-              "Invalid timestamp for transaction:",
-              tx.id,
-              tx.timestamp
-            );
-            timestamp = new Date().toISOString(); // Fallback to current time
-          }
-
-          return {
-            id: tx.id.toString(),
-            department: tx.department,
-            type: TransactionType[tx.txType] || "UNKNOWN",
-            amount: ethers.formatEther(tx.amount || 0),
-            description: tx.description || "",
-            status: TransactionStatus[tx.status] || "PENDING",
-            timestamp,
-            from: tx.department,
-            to: tx.department,
-          };
-        });
-
-      console.log("Filtered pending transactions:", pending);
-      return pending;
+      return transactions
+        .filter((tx: any) => tx.status === 0) // Filter PENDING transactions
+        .map((tx: any) => ({
+          id: tx.id.toString(),
+          department: tx.department,
+          type: TransactionType[tx.txType],
+          amount: ethers.formatEther(tx.amount),
+          description: tx.description,
+          status: TransactionStatus[tx.status],
+          timestamp: new Date(Number(tx.timestamp) * 1000).toISOString(),
+          from: tx.department,
+          to: tx.department, // In real implementation, this would be the recipient
+        }));
     } catch (error) {
       console.error("Failed to get pending transactions:", error);
       throw error;
@@ -920,63 +837,6 @@ export class DepartmentSystemActions {
         error instanceof Error ? error.message : "Unknown error occurred"
       );
     }
-  }
-
-  // Add this method to the DepartmentSystemActions class
-  async getMonthlyBudgetData(
-    departmentAddress: string,
-    months: number
-  ): Promise<MonthlyBudget[]> {
-    try {
-      const budgetController = await this.getBudgetController();
-      const currentTime = Math.floor(Date.now() / 1000);
-      const monthInSeconds = 30 * 24 * 60 * 60;
-
-      console.log("Fetching budget data for department:", departmentAddress);
-      console.log("Current time:", new Date(currentTime * 1000).toISOString());
-
-      const monthlyData: MonthlyBudget[] = [];
-
-      for (let i = 0; i < months; i++) {
-        const timestamp = currentTime - i * monthInSeconds;
-        console.log(
-          `Fetching month ${i} data for:`,
-          new Date(timestamp * 1000).toISOString()
-        );
-
-        const [allocated, spent] = await Promise.all([
-          budgetController.getAllocatedBudgetAt(departmentAddress, timestamp),
-          budgetController.getSpentBudgetAt(departmentAddress, timestamp),
-        ]);
-
-        console.log("Raw allocated amount:", allocated.toString());
-        console.log("Raw spent amount:", spent.toString());
-
-        monthlyData.push({
-          timestamp,
-          allocated: Number(allocated),
-          spent: Number(spent),
-        });
-      }
-
-      console.log("Final monthly data:", monthlyData);
-      return monthlyData.reverse();
-    } catch (error) {
-      console.error("Error fetching monthly budget data:", error);
-      throw error;
-    }
-  }
-
-  // Add this method to the DepartmentSystemActions class
-  private async getBudgetController(): Promise<ethers.Contract> {
-    if (!this.budgetController) {
-      this.budgetController = new ethers.Contract(
-        CONTRACT_ADDRESSES.BUDGET_CONTROLLER,
-        BudgetControllerABI.abi,
-        this.signer
-      );
-    }
-    return this.budgetController;
   }
 }
 

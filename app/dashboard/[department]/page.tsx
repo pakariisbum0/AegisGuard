@@ -120,20 +120,6 @@ const getActivityStyles = (activity: ActivityItem) => {
   return styles[activity.category || "transfer"];
 };
 
-// Add these interfaces near the top of the file
-interface BudgetData {
-  month: string;
-  allocated: number;
-  spent: number;
-}
-
-interface DepartmentBudgetStats {
-  totalAllocated: string;
-  totalSpent: string;
-  efficiencyRate: string;
-  monthlyData: BudgetData[];
-}
-
 export default function DepartmentDashboard({
   params,
 }: {
@@ -179,62 +165,9 @@ export default function DepartmentDashboard({
   );
   const [isCreateTransactionModalOpen, setIsCreateTransactionModalOpen] =
     useState(false);
-  const [budgetStats, setBudgetStats] = useState<DepartmentBudgetStats | null>(
-    null
-  );
 
-  // Define calculateBudgetStats before useEffect
-  const calculateBudgetStats = async (
-    departmentAddress: string
-  ): Promise<DepartmentBudgetStats> => {
-    try {
-      const { provider, signer } =
-        await DepartmentSystemActions.connectWallet();
-      const departmentSystem = new DepartmentSystemActions(provider, signer);
-
-      // Get monthly budget data for the last 8 months
-      const monthlyData = await departmentSystem.getMonthlyBudgetData(
-        departmentAddress,
-        8
-      );
-
-      // Calculate totals
-      const totalAllocated = monthlyData.reduce(
-        (sum, month) => sum + month.allocated,
-        0
-      );
-      const totalSpent = monthlyData.reduce(
-        (sum, month) => sum + month.spent,
-        0
-      );
-      const efficiencyRate = ((totalSpent / totalAllocated) * 100).toFixed(1);
-
-      return {
-        totalAllocated: `$${(totalAllocated / 1e9).toFixed(1)}B`,
-        totalSpent: `$${(totalSpent / 1e9).toFixed(1)}B`,
-        efficiencyRate: `${efficiencyRate}%`,
-        monthlyData: monthlyData.map((month) => ({
-          month: new Date(month.timestamp * 1000).toLocaleString("default", {
-            month: "short",
-          }),
-          allocated: Number((month.allocated / 1e9).toFixed(1)),
-          spent: Number((month.spent / 1e9).toFixed(1)),
-        })),
-      };
-    } catch (error) {
-      console.error("Error calculating budget stats:", error);
-      return {
-        totalAllocated: "$0",
-        totalSpent: "$0",
-        efficiencyRate: "0%",
-        monthlyData: [],
-      };
-    }
-  };
-
-  // Now useEffect can access calculateBudgetStats
   useEffect(() => {
-    const fetchDepartmentData = async () => {
+    const fetchDepartmentDetails = async () => {
       try {
         setLoading(true);
         const { provider, signer } =
@@ -244,10 +177,6 @@ export default function DepartmentDashboard({
           params.department
         );
         setDepartmentData(details);
-
-        // Fetch budget stats
-        const stats = await calculateBudgetStats(details.address);
-        setBudgetStats(stats);
       } catch (err) {
         console.error("Failed to fetch department details:", err);
         setError(
@@ -260,7 +189,7 @@ export default function DepartmentDashboard({
       }
     };
 
-    fetchDepartmentData();
+    fetchDepartmentDetails();
   }, [params.department]);
 
   useEffect(() => {
@@ -1014,93 +943,102 @@ export default function DepartmentDashboard({
                       <span className="w-3 h-3 rounded-full bg-gray-400" />
                       <span className="text-gray-600">Spent</span>
                     </div>
+                    <Select defaultValue="8months">
+                      <SelectTrigger className="w-[180px] text-sm border-gray-200 bg-white">
+                        <SelectValue placeholder="Select period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="8months">Last 8 Months</SelectItem>
+                        <SelectItem value="12months">Last 12 Months</SelectItem>
+                        <SelectItem value="year">This Year</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-
-                {budgetStats ? (
-                  <>
-                    <div className="h-80">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={budgetStats.monthlyData}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={budgetData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fill: "#6B7280" }}
+                        axisLine={{ stroke: "#E5E7EB" }}
+                      />
+                      <YAxis
+                        tick={{ fill: "#6B7280" }}
+                        axisLine={{ stroke: "#E5E7EB" }}
+                        tickFormatter={(value) => `$${value}B`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "white",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "0.5rem",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                        formatter={(value) => [`$${value}B`, ""]}
+                      />
+                      <Bar
+                        dataKey="allocated"
+                        fill="#000000"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={40}
+                      />
+                      <Bar
+                        dataKey="spent"
+                        fill="#9CA3AF"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={40}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                  {[
+                    {
+                      label: "Total Allocated",
+                      value: "$531.4B",
+                      change: "+2.3%",
+                      trend: "up",
+                    },
+                    {
+                      label: "Total Spent",
+                      value: "$507.2B",
+                      change: "+1.8%",
+                      trend: "up",
+                    },
+                    {
+                      label: "Efficiency Rate",
+                      value: "95.4%",
+                      change: "+0.5%",
+                      trend: "up",
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                    >
+                      <p className="text-sm text-gray-500">{stat.label}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-lg font-semibold text-gray-900">
+                          {stat.value}
+                        </p>
+                        <span
+                          className={`text-xs font-medium ${
+                            stat.trend === "up"
+                              ? "text-emerald-600"
+                              : "text-red-600"
+                          }`}
                         >
-                          <CartesianGrid
-                            strokeDasharray="3 3"
-                            stroke="#f0f0f0"
-                          />
-                          <XAxis
-                            dataKey="month"
-                            tick={{ fill: "#6B7280" }}
-                            axisLine={{ stroke: "#E5E7EB" }}
-                          />
-                          <YAxis
-                            tick={{ fill: "#6B7280" }}
-                            axisLine={{ stroke: "#E5E7EB" }}
-                            tickFormatter={(value) => `$${value}B`}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "white",
-                              border: "1px solid #E5E7EB",
-                              borderRadius: "0.5rem",
-                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                            }}
-                            formatter={(value) => [`$${value}B`, ""]}
-                          />
-                          <Bar
-                            dataKey="allocated"
-                            fill="#000000"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={40}
-                          />
-                          <Bar
-                            dataKey="spent"
-                            fill="#9CA3AF"
-                            radius={[4, 4, 0, 0]}
-                            maxBarSize={40}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-4">
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                        <p className="text-sm text-gray-500">Total Allocated</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-lg font-semibold text-gray-900">
-                            {budgetStats.totalAllocated}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                        <p className="text-sm text-gray-500">Total Spent</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-lg font-semibold text-gray-900">
-                            {budgetStats.totalSpent}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                        <p className="text-sm text-gray-500">Efficiency Rate</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-lg font-semibold text-gray-900">
-                            {budgetStats.efficiencyRate}
-                          </p>
-                        </div>
+                          {stat.change}
+                        </span>
                       </div>
                     </div>
-                  </>
-                ) : (
-                  <div className="h-80 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-                      <p className="mt-4 text-gray-500">
-                        Loading budget data...
-                      </p>
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
 
               {/* Active Projects */}
