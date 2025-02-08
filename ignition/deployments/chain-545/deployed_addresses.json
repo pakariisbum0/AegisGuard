@@ -1,6 +1,6 @@
 {
-  "DepartmentSystem#DepartmentRegistry": "0x68de061DDf89dD58bea442eA033D0E1983ad0880",
-  "DepartmentSystem#ActivityTracker": "0x3Bc23103bd1862F8E8EA02104d7b39B30f487f10",
-  "DepartmentSystem#ProposalManager": "0x6832C283e812a611422F026Dee8F198664C33Fe9",
-  "DepartmentSystem#BudgetController": "0x372b4c6649C2F8D586a52d78d84f276FCfE16a8c"
+  "DepartmentSystem#DepartmentRegistry": "0x06e3C7f56328063CDA93BD6dd2bbfa720437395C",
+  "DepartmentSystem#ActivityTracker": "0x6EC498B21bE6263059b1BF3781e13B6d43f20eeB",
+  "DepartmentSystem#BudgetController": "0x97E206EE05d2B4fB689F3aF0D2d8b5aDb412683F",
+  "DepartmentSystem#ProposalManager": "0xc6B190f5c779909C4D41ed0961aB5d2093E46E34"
 }

@@ -27,6 +27,7 @@ import {
   DepartmentSystemActions,
   DepartmentDetails,
   Transaction,
+  DepartmentMetrics,
 } from "@/lib/contracts/actions";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -39,11 +40,13 @@ import {
   Wallet,
   BarChart3,
   RefreshCcw,
+  Building2,
+  FolderGit2,
+  FileCheck,
 } from "lucide-react";
 import { ProcessTransactionModal } from "@/app/components/ProcessTransactionModal";
 import { CreateTransactionModal } from "@/app/components/CreateTransactionModal";
-
-// import { useToast } from "@/components/ui/use-toast";
+import { ethers } from "ethers";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
@@ -165,6 +168,14 @@ export default function DepartmentDashboard({
   );
   const [isCreateTransactionModalOpen, setIsCreateTransactionModalOpen] =
     useState(false);
+  const [metrics, setMetrics] = useState<DepartmentMetrics | null>(null);
+  const [budgetData, setBudgetData] = useState<{
+    allocated: string;
+    spent: string;
+    remaining: string;
+    efficiency: number;
+  } | null>(null);
+  const [availableBudget, setAvailableBudget] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDepartmentDetails = async () => {
@@ -213,6 +224,61 @@ export default function DepartmentDashboard({
     };
 
     fetchPendingTransactions();
+  }, [departmentData]);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const { provider, signer } =
+          await DepartmentSystemActions.connectWallet();
+        const departmentSystem = new DepartmentSystemActions(provider, signer);
+
+        // Get metrics
+        const departmentMetrics = await departmentSystem.getDepartmentMetrics();
+        setMetrics(departmentMetrics);
+
+        // Get budget data if department exists
+        if (departmentData) {
+          const budgetInfo = await departmentSystem.getDepartmentBudgetData(
+            departmentData.address
+          );
+
+          setBudgetData({
+            allocated: ethers.formatEther(budgetInfo.allocated),
+            spent: ethers.formatEther(budgetInfo.spent),
+            remaining: ethers.formatEther(budgetInfo.remaining),
+            efficiency: budgetInfo.efficiency,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch metrics:", error);
+      }
+    };
+
+    fetchMetrics();
+  }, [departmentData]);
+
+  useEffect(() => {
+    const fetchAvailableBudget = async () => {
+      if (departmentData) {
+        try {
+          const { provider, signer } =
+            await DepartmentSystemActions.connectWallet();
+          const departmentSystem = new DepartmentSystemActions(
+            provider,
+            signer
+          );
+          const budgetInfo = await departmentSystem.getDepartmentBudgetData(
+            departmentData.address
+          );
+          setAvailableBudget(ethers.formatEther(budgetInfo.remaining));
+        } catch (error) {
+          console.error("Failed to fetch available budget:", error);
+        }
+      }
+    };
+
+    fetchAvailableBudget();
   }, [departmentData]);
 
   if (loading) {
@@ -392,9 +458,24 @@ export default function DepartmentDashboard({
         await DepartmentSystemActions.connectWallet();
       const departmentSystem = new DepartmentSystemActions(provider, signer);
 
+      // Validate budget before submitting
+      const validation = await departmentSystem.validateProjectBudget(
+        departmentData.address,
+        projectForm.amount
+      );
+
+      if (!validation.isValid) {
+        toast({
+          title: "Error",
+          description: validation.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       await departmentSystem.submitProposal(
         projectForm.title,
-        DepartmentSystemActions.formatAmount(projectForm.amount),
+        projectForm.amount,
         JSON.stringify({
           description: projectForm.description,
           timeline: projectForm.timeline,
@@ -404,10 +485,9 @@ export default function DepartmentDashboard({
       );
 
       toast({
-        title: "Project Created",
-        description: "Your project has been successfully submitted for review.",
+        title: "Success",
+        description: "Project has been successfully submitted for review.",
         variant: "default",
-        duration: 5000,
       });
 
       setIsNewProjectModalOpen(false);
@@ -432,7 +512,6 @@ export default function DepartmentDashboard({
         description:
           err instanceof Error ? err.message : "Failed to create project",
         variant: "destructive",
-        duration: 5000,
       });
     } finally {
       setIsSubmitting(false);
@@ -644,16 +723,23 @@ export default function DepartmentDashboard({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Amount (ETH)
             </label>
-            <input
-              type="text"
-              value={projectForm.amount}
-              onChange={(e) =>
-                setProjectForm({ ...projectForm, amount: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter amount in ETH"
-              required
-            />
+            <div className="space-y-1">
+              <input
+                type="text"
+                value={projectForm.amount}
+                onChange={(e) =>
+                  setProjectForm({ ...projectForm, amount: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter amount in ETH"
+                required
+              />
+              {availableBudget && (
+                <p className="text-sm text-gray-500">
+                  Available Budget: {availableBudget} ETH
+                </p>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -819,6 +905,121 @@ export default function DepartmentDashboard({
     </div>
   );
 
+  // Update the Budget Overview section to use real data
+  const BudgetOverview = () => (
+    <div className="bg-white rounded-xl p-6 border border-gray-100">
+      <div className="flex justify-between items-center mb-6">
+        <h2
+          className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+        >
+          Budget Overview
+        </h2>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-3 h-3 rounded-full bg-black" />
+            <span className="text-gray-600">Allocated</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-3 h-3 rounded-full bg-gray-400" />
+            <span className="text-gray-600">Spent</span>
+          </div>
+          <Select defaultValue="8months">
+            <SelectTrigger className="w-[180px] text-sm border-gray-200 bg-white">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="8months">Last 8 Months</SelectItem>
+              <SelectItem value="12months">Last 12 Months</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={budgetData}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis
+              dataKey="month"
+              tick={{ fill: "#6B7280" }}
+              axisLine={{ stroke: "#E5E7EB" }}
+            />
+            <YAxis
+              tick={{ fill: "#6B7280" }}
+              axisLine={{ stroke: "#E5E7EB" }}
+              tickFormatter={(value) => `$${value}B`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "white",
+                border: "1px solid #E5E7EB",
+                borderRadius: "0.5rem",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+              }}
+              formatter={(value) => [`$${value}B`, ""]}
+            />
+            <Bar
+              dataKey="allocated"
+              fill="#000000"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={40}
+            />
+            <Bar
+              dataKey="spent"
+              fill="#9CA3AF"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={40}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-4">
+        {[
+          {
+            label: "Total Allocated",
+            value: budgetData?.allocated || "0",
+            change: "+0%",
+            trend: "up",
+          },
+          {
+            label: "Total Spent",
+            value: budgetData?.spent || "0",
+            change: "+0%",
+            trend: "up",
+          },
+          {
+            label: "Efficiency Rate",
+            value: `${budgetData?.efficiency || 0}%`,
+            change: "+0%",
+            trend: "up",
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+          >
+            <p className="text-sm text-gray-500">{stat.label}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-lg font-semibold text-gray-900">
+                {stat.value}
+              </p>
+              <span
+                className={`text-xs font-medium ${
+                  stat.trend === "up" ? "text-emerald-600" : "text-red-600"
+                }`}
+              >
+                {stat.change}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <Header />
@@ -927,119 +1128,7 @@ export default function DepartmentDashboard({
             {/* Left Column - Budget & Charts */}
             <div className="col-span-2 space-y-8">
               {/* Budget Overview */}
-              <div className="bg-white rounded-xl p-6 border border-gray-100">
-                <div className="flex justify-between items-center mb-6">
-                  <h2
-                    className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
-                  >
-                    Budget Overview
-                  </h2>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-3 h-3 rounded-full bg-black" />
-                      <span className="text-gray-600">Allocated</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-3 h-3 rounded-full bg-gray-400" />
-                      <span className="text-gray-600">Spent</span>
-                    </div>
-                    <Select defaultValue="8months">
-                      <SelectTrigger className="w-[180px] text-sm border-gray-200 bg-white">
-                        <SelectValue placeholder="Select period" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="8months">Last 8 Months</SelectItem>
-                        <SelectItem value="12months">Last 12 Months</SelectItem>
-                        <SelectItem value="year">This Year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={budgetData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis
-                        dataKey="month"
-                        tick={{ fill: "#6B7280" }}
-                        axisLine={{ stroke: "#E5E7EB" }}
-                      />
-                      <YAxis
-                        tick={{ fill: "#6B7280" }}
-                        axisLine={{ stroke: "#E5E7EB" }}
-                        tickFormatter={(value) => `$${value}B`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #E5E7EB",
-                          borderRadius: "0.5rem",
-                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                        }}
-                        formatter={(value) => [`$${value}B`, ""]}
-                      />
-                      <Bar
-                        dataKey="allocated"
-                        fill="#000000"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={40}
-                      />
-                      <Bar
-                        dataKey="spent"
-                        fill="#9CA3AF"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={40}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-4">
-                  {[
-                    {
-                      label: "Total Allocated",
-                      value: "$531.4B",
-                      change: "+2.3%",
-                      trend: "up",
-                    },
-                    {
-                      label: "Total Spent",
-                      value: "$507.2B",
-                      change: "+1.8%",
-                      trend: "up",
-                    },
-                    {
-                      label: "Efficiency Rate",
-                      value: "95.4%",
-                      change: "+0.5%",
-                      trend: "up",
-                    },
-                  ].map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="bg-gray-50 rounded-lg p-4 border border-gray-100"
-                    >
-                      <p className="text-sm text-gray-500">{stat.label}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-lg font-semibold text-gray-900">
-                          {stat.value}
-                        </p>
-                        <span
-                          className={`text-xs font-medium ${
-                            stat.trend === "up"
-                              ? "text-emerald-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {stat.change}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <BudgetOverview />
 
               {/* Active Projects */}
               <div className="bg-white rounded-xl p-6 border border-gray-100">
