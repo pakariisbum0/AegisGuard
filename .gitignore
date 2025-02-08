@@ -37,6 +37,7 @@ yarn-error.log*
 /auto-commit.log
 auto-commit.log
 idea.node_modules
+README.txt
 # env files (can opt-in for committing if needed)
 .env*
 drizzle.config.js

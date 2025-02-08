@@ -1,36 +1,222 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+# DOGE (Decentralized Organization Governance Engine)
 
-First, run the development server:
+<img src="public/doge-logo.png" alt="DOGE Logo" width="200"/>
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.0-black)](https://nextjs.org/)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636)](https://docs.soliditylang.org/)
+[![Flow](https://img.shields.io/badge/Flow-Blockchain-00ef8b)](https://flow.com/)
+
+A revolutionary decentralized governance platform for organizational budget management and decision-making.
+
+[Explore Demo](https://doge-demo.vercel.app) · [Report Bug](https://github.com/yourusername/doge/issues) · [Request Feature](https://github.com/yourusername/doge/issues)
+
+</div>
+
+---
+
+## 🌟 Why DOGE?
+
+DOGE revolutionizes organizational governance by combining the power of blockchain technology with intuitive department management. Our platform enables:
+
+- **Transparent Budget Management**: Real-time tracking of department budgets
+- **Decentralized Decision Making**: Democratic proposal and voting system
+- **Automated Execution**: Smart contract-powered budget allocation
+- **Comprehensive Activity Tracking**: Full audit trail of all operations
+
+## 🚀 Core Features
+
+### Department Management
+
+- Create and manage department structures
+- Assign department heads with specific privileges
+- Track department performance metrics
+
+### Budget Control System
+
+- Real-time budget tracking
+- Smart contract-powered fund allocation
+- Automated budget execution
+- Multi-signature transaction approval
+
+### DAO Governance
+
+- Create and vote on budget proposals
+- Weighted voting system
+- Automated proposal execution
+- Governance token (DOGE) integration
+
+### Activity Monitoring
+
+- Real-time activity dashboard
+- Transaction history
+- Department performance analytics
+- Audit trails
+
+## 🛠 Technical Architecture
+
+### Frontend
+
+- **Framework**: Next.js 14 with App Router
+- **Styling**: TailwindCSS + shadcn/ui
+- **State Management**: React Context + Hooks
+- **Web3 Integration**: ethers.js + Flow Client Library
+
+### Backend
+
+- **Smart Contracts**: Solidity 0.8.24
+- **Blockchain**: Flow + EVM Compatible
+- **Database**: PostgreSQL with Prisma ORM
+- **File Storage**: Cloudinary CDN
+
+### Authentication
+
+- **Web3 Auth**: Privy Integration
+- **Role Management**: Smart Contract-based
+
+## 📦 Installation
+
+### Prerequisites
+
+```bash
+Node.js >= 18.0.0
+PostgreSQL >= 14
+MetaMask Wallet
+Flow CLI (optional)
+```
+
+### Environment Variables
+
+Create `.env.local`:
+
+```bash
+# Blockchain
+NEXT_PUBLIC_DEPARTMENT_REGISTRY_ADDRESS=<contract_address>
+WALLET_PRIVATE_KEY_FLOW=<private_key>
+
+# Authentication
+NEXT_PUBLIC_PRIVY_APP_ID=<privy_app_id>
+
+# Storage
+CLOUDINARY_API_SECRET=<cloudinary_secret>
+
+# AI Integration
+NEXT_PUBLIC_AI_ENDPOINT=<ai_endpoint>
+NEXT_PUBLIC_AI_CREDENTIALS=<credentials>
+
+# Database
+DATABASE_URL=<postgresql_url>
+```
+
+### Setup Steps
+
+1. **Clone Repository**
+
+```bash
+git clone https://github.com/pakariisbum0/AegisGuard.git
+cd AegisGuard
+```
+
+2. **Install Dependencies**
+
+```bash
+npm install
+# or
+yarn install
+```
+
+3. **Database Setup**
+
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
+
+4. **Start Development Server**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. **Smart Contract Deployment**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx hardhat compile
+npx hardhat run scripts/deploy.js --network flow
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧪 Testing
 
-## Learn More
+### Smart Contract Tests
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx hardhat test
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Frontend Tests
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run test
+# or
+yarn test
+```
 
-## Deploy on Vercel
+## 🚢 Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Smart Contracts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Configure networks in `hardhat.config.js`
+2. Deploy to testnet:
+
+```bash
+npx hardhat run scripts/deploy.js --network flowTestnet
+```
+
+3. Deploy to mainnet:
+
+```bash
+npx hardhat run scripts/deploy.js --network flowMainnet
+```
+
+### Frontend
+
+1. Build the application:
+
+```bash
+npm run build
+```
+
+2. Deploy to Vercel:
+
+```bash
+vercel deploy
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📜 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## 👥 Team
+
+- **Developer** - [@leaddev](https://github.com/pakariisbum0)
+
+## 🙏 Acknowledgments
+
+- Huge thanks to ETHGlobal for the opportunity to build this project.
+
+<div align="center">
+Made with ❤️ by the DOGE Team
+</div>
