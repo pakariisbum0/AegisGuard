@@ -8,7 +8,17 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Add output configuration for Netlify
+  output: "standalone",
+  // Disable React strict mode for now
+  reactStrictMode: false,
+  // Enable experimental features
+  experimental: {
+    // Enable if you're using app directory
+    appDir: true,
+  },
   images: {
+    unoptimized: true, // Add this for Netlify
     remotePatterns: [
       {
         protocol: "https",
