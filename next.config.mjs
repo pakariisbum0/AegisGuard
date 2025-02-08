@@ -8,17 +8,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Add output configuration for Netlify
-  output: "standalone",
+  // Change output to export for Netlify
+  output: "export",
   // Disable React strict mode for now
   reactStrictMode: false,
-  // Enable experimental features
-  experimental: {
-    // Enable if you're using app directory
-    appDir: true,
-  },
+  // Disable image optimization for static export
   images: {
-    unoptimized: true, // Add this for Netlify
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -45,6 +41,8 @@ const nextConfig = {
       },
     ],
   },
+  // Required for static export
+  trailingSlash: true,
 };
 
 export default nextConfig;

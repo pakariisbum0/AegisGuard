@@ -13,5 +13,8 @@
 # Needed for dynamic routes
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/server"
-  status = 200 
+  to = "/index.html"
+  status = 200
+
+[functions]
+  node_bundler = "esbuild" 
