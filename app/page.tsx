@@ -10,6 +10,8 @@ import {
   DepartmentSystemActions,
   DepartmentMetrics,
 } from "@/lib/contracts/actions";
+import { Building2, Wallet, FolderGit2, FileCheck } from "lucide-react";
+import { ethers } from "ethers";
 
 const inter = Inter({ subsets: ["latin"] });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
@@ -20,6 +22,16 @@ export default function Home() {
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const formatUsdValue = (ethValue: string | number) => {
+    const value = Number(ethValue) * 3000; // Using same rate as in actions.ts
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -89,33 +101,29 @@ export default function Home() {
     {
       label: "Total Budget",
       value: metrics
-        ? `$${((Number(metrics.totalBudgets) / 1e18) * 3000).toLocaleString(
-            "en-US",
-            {
-              maximumFractionDigits: 0,
-            }
-          )}`
+        ? new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(Number(ethers.formatEther(metrics.totalBudgets)) * 3000)
         : "Loading...",
-      change: "+12.3%",
-      trend: "up",
+      icon: Wallet,
     },
     {
       label: "Departments",
-      value: metrics ? `${metrics.totalDepartments}+` : "Loading...",
-      change: "+2",
-      trend: "up",
+      value: metrics ? metrics.totalDepartments : "Loading...",
+      icon: Building2,
     },
     {
       label: "Active Projects",
-      value: metrics ? metrics.approvedProposals.toString() : "Loading...",
-      change: "-234",
-      trend: "down",
+      value: metrics ? metrics.approvedProposals : "Loading...",
+      icon: FolderGit2,
     },
     {
       label: "Pending Proposals",
-      value: metrics ? metrics.pendingProposals.toString() : "Loading...",
-      change: metrics ? `+${metrics.pendingProposals}` : "+0",
-      trend: "up",
+      value: metrics ? metrics.pendingProposals : "Loading...",
+      icon: FileCheck,
       subtitle: "Awaiting Review",
     },
   ];
@@ -169,7 +177,22 @@ export default function Home() {
                   className="bg-white rounded-xl p-6 hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-gray-200 relative overflow-hidden"
                 >
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500/20 to-violet-500/20" />
-
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="p-2 rounded-lg bg-gray-50">
+                      <stat.icon className="w-5 h-5 text-gray-600" />
+                    </div>
+                    {stat.change && (
+                      <span
+                        className={`text-${
+                          stat.trend === "up" ? "emerald" : "red"
+                        }-600 text-sm bg-${
+                          stat.trend === "up" ? "emerald" : "red"
+                        }-50 px-2 py-0.5 rounded-full`}
+                      >
+                        {stat.trend === "up" ? "↑" : "↓"} {stat.change}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
                   <div className="flex items-baseline gap-2">
                     <p className="text-2xl font-bold text-gray-900">
@@ -181,19 +204,6 @@ export default function Home() {
                       </span>
                     )}
                   </div>
-                  {stat.change && (
-                    <div className="mt-2 flex items-center">
-                      {stat.trend === "up" ? (
-                        <span className="text-emerald-600 text-sm bg-emerald-50 px-2 py-0.5 rounded-full">
-                          ↑ {stat.change}
-                        </span>
-                      ) : (
-                        <span className="text-red-600 text-sm bg-red-50 px-2 py-0.5 rounded-full">
-                          ↓ {stat.change}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -283,9 +293,14 @@ export default function Home() {
                         Tx: {item.txHash.slice(0, 6)}...{item.txHash.slice(-4)}
                       </span>
                     </div>
-                    <button className="text-sm text-blue-600 hover:text-blue-700">
+                    <a
+                      href={`https://evm-testnet.flowscan.io/tx/${item.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    >
                       View Details →
-                    </button>
+                    </a>
                   </div>
                 </div>
               ))}
