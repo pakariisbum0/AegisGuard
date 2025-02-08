@@ -104,6 +104,16 @@ export interface Transaction {
   to?: string;
 }
 
+// Add these new interfaces
+interface DepartmentMetrics {
+  totalDepartments: number;
+  totalBudgets: bigint;
+  approvedProposals: number;
+  totalProjects: number;
+  pendingTransactions: number;
+  pendingProposals: number;
+}
+
 // Add this interface to match the contract's transaction functions
 // interface IBudgetController {
 //   createTransaction(
@@ -195,22 +205,43 @@ export class DepartmentSystemActions {
 
   // Budget Controller Actions
   async createTransaction(
+    department: string,
     txType: TransactionType,
     amount: string,
     description: string
-  ) {
-    const typeIndex = [
-      "BUDGET_ALLOCATION",
-      "PROJECT_FUNDING",
-      "BUDGET_UPDATE",
-      "EXPENSE",
-    ].indexOf(txType);
-    const tx = await this.budgetController.createTransaction(
-      typeIndex,
-      amount,
-      description
-    );
-    return tx.wait();
+  ): Promise<ethers.ContractTransactionResponse> {
+    try {
+      const amountWei = ethers.parseEther(amount);
+
+      // Convert TransactionType to number
+      const txTypeIndex = Object.values(TransactionType).indexOf(txType);
+
+      // Create transaction
+      const tx = await this.budgetController.createTransaction(
+        txTypeIndex,
+        amountWei,
+        description
+      );
+      const receipt = await tx.wait();
+
+      // Update total spent
+      await this.updateTotalSpent(department, amountWei);
+
+      // Log activity
+      await this.logActivity(
+        department,
+        txType,
+        amountWei,
+        description,
+        receipt.hash,
+        "Completed"
+      );
+
+      return receipt;
+    } catch (error) {
+      console.error("Failed to create transaction:", error);
+      throw error;
+    }
   }
 
   async processTransaction(
@@ -839,58 +870,145 @@ export class DepartmentSystemActions {
     }
   }
 
-  async getSystemMetrics(): Promise<{
-    totalDepartments: number;
-    totalBudgets: string;
-    approvedProposals: number;
-    totalProjects: number;
-    pendingTransactions: number;
-    pendingProposals: number;
-  }> {
+  // Add new methods for metrics
+  async getDepartmentMetrics(): Promise<DepartmentMetrics> {
     try {
-      // Get metrics from contracts
-      const [budgetMetrics, proposalMetrics] = await Promise.all([
-        this.budgetController.getSystemMetrics(),
-        this.proposalManager.getProposalMetrics(),
-      ]);
+      // Get all departments
+      const departments = await this.fetchAllDepartments();
 
-      const departments = await this.departmentRegistry.getAllDepartments();
+      // Get all proposals
+      const allProposals = await Promise.all(
+        departments.map((dept) =>
+          this.getProposalsByDepartment(dept.departmentHead)
+        )
+      );
+
+      // Get all transactions
+      const allTransactions = await Promise.all(
+        departments.map((dept) =>
+          this.getTransactionsByDepartment(dept.departmentHead)
+        )
+      );
+
+      // Calculate metrics
+      const totalBudgets = departments.reduce(
+        (acc, dept) => acc + BigInt(ethers.parseEther(dept.budget)),
+        BigInt(0)
+      );
+
+      const approvedProposals = allProposals.flat().filter(
+        (p: any) => p.status === 2 // APPROVED status
+      ).length;
+
+      const pendingProposals = allProposals.flat().filter(
+        (p: any) => p.status === 0 // PENDING status
+      ).length;
+
+      const pendingTransactions = allTransactions.flat().filter(
+        (tx: any) => tx.status === 0 // PENDING status
+      ).length;
+
+      const totalProjects = departments.reduce(
+        (acc, dept) => acc + dept.projects,
+        0
+      );
 
       return {
         totalDepartments: departments.length,
-        totalBudgets: ethers.formatEther(budgetMetrics.totalBudget),
-        approvedProposals: proposalMetrics.approved,
-        totalProjects: proposalMetrics.total,
-        pendingTransactions: budgetMetrics.pendingTransactionCount,
-        pendingProposals: proposalMetrics.pending,
+        totalBudgets,
+        approvedProposals,
+        totalProjects,
+        pendingTransactions,
+        pendingProposals,
       };
     } catch (error) {
-      console.error("Failed to fetch system metrics:", error);
+      console.error("Failed to get department metrics:", error);
       throw error;
     }
   }
 
-  // Modify createTransaction to update totals
-  async createTransaction(
-    txType: TransactionType,
-    amount: string,
-    description: string
-  ): Promise<ethers.ContractTransactionResponse> {
+  // Add method to update budget allocation
+  async updateBudgetAllocation(
+    departmentAddress: string,
+    newAllocation: bigint
+  ): Promise<void> {
     try {
-      const amountWei = ethers.parseEther(amount);
-      const tx = await this.budgetController.createTransaction(
-        Object.values(TransactionType).indexOf(txType),
-        amountWei,
-        description
+      // Update budget in smart contract
+      const tx = await this.budgetController.updateTotalAllocated(
+        departmentAddress,
+        newAllocation
+      );
+      await tx.wait();
+
+      // Log the activity
+      await this.logActivity(
+        departmentAddress,
+        "Budget Allocation Update",
+        newAllocation,
+        "Budget allocation updated by admin",
+        tx.hash,
+        "Completed"
+      );
+    } catch (error) {
+      console.error("Failed to update budget allocation:", error);
+      throw error;
+    }
+  }
+
+  // Add method to update total spent
+  async updateTotalSpent(
+    departmentAddress: string,
+    amount: bigint
+  ): Promise<void> {
+    try {
+      // Update total spent in smart contract
+      const tx = await this.budgetController.updateTotalSpent(
+        departmentAddress,
+        amount
+      );
+      await tx.wait();
+
+      // Log the activity
+      await this.logActivity(
+        departmentAddress,
+        "Total Spent Update",
+        amount,
+        "Total spent updated after transaction",
+        tx.hash,
+        "Completed"
+      );
+    } catch (error) {
+      console.error("Failed to update total spent:", error);
+      throw error;
+    }
+  }
+
+  // Add method to get department budget data
+  async getDepartmentBudgetData(departmentAddress: string): Promise<{
+    allocated: bigint;
+    spent: bigint;
+    remaining: bigint;
+    efficiency: number;
+  }> {
+    try {
+      const [allocated, spent] = await Promise.all([
+        this.budgetController.getTotalAllocated(departmentAddress),
+        this.budgetController.getTotalSpent(departmentAddress),
+      ]);
+
+      const remaining = allocated - spent;
+      const efficiency = Number(
+        ((Number(spent) / Number(allocated)) * 100).toFixed(2)
       );
 
-      // Wait for transaction and update totals
-      await tx.wait();
-      await this.budgetController.updateTotals();
-
-      return tx;
+      return {
+        allocated,
+        spent,
+        remaining,
+        efficiency,
+      };
     } catch (error) {
-      console.error("Failed to create transaction:", error);
+      console.error("Failed to get budget data:", error);
       throw error;
     }
   }
