@@ -292,6 +292,17 @@ export class DepartmentSystemActions {
     category: string
   ): Promise<ethers.ContractTransactionResponse> {
     try {
+      const senderAddress = await this.signer.getAddress();
+
+      // Validate budget before submitting
+      const validation = await this.validateProjectBudget(
+        senderAddress,
+        amount
+      );
+      if (!validation.isValid) {
+        throw new Error(validation.message);
+      }
+
       const amountWei = DepartmentSystemActions.formatAmount(amount);
       const tx = await this.proposalManager.submitProposal(
         title,
@@ -878,15 +889,8 @@ export class DepartmentSystemActions {
 
       // Get all proposals
       const allProposals = await Promise.all(
-        departments.map((dept) =>
+        departments.map(async (dept) =>
           this.getProposalsByDepartment(dept.departmentHead)
-        )
-      );
-
-      // Get all transactions
-      const allTransactions = await Promise.all(
-        departments.map((dept) =>
-          this.getTransactionsByDepartment(dept.departmentHead)
         )
       );
 
@@ -896,22 +900,33 @@ export class DepartmentSystemActions {
         BigInt(0)
       );
 
-      const approvedProposals = allProposals.flat().filter(
-        (p: any) => p.status === 2 // APPROVED status
+      // Flatten all proposals into a single array
+      const flattenedProposals = allProposals.flat();
+
+      // Count approved proposals (status 2 = APPROVED)
+      const approvedProposals = flattenedProposals.filter(
+        (p) => Number(p.status) === 2
       ).length;
 
-      const pendingProposals = allProposals.flat().filter(
-        (p: any) => p.status === 0 // PENDING status
+      // Count pending proposals (status 0 = PENDING)
+      const pendingProposals = flattenedProposals.filter(
+        (p) => Number(p.status) === 0 || Number(p.status) === 1 // PENDING or UNDER_REVIEW
       ).length;
 
-      const pendingTransactions = allTransactions.flat().filter(
-        (tx: any) => tx.status === 0 // PENDING status
-      ).length;
-
-      const totalProjects = departments.reduce(
-        (acc, dept) => acc + dept.projects,
-        0
+      // Get all transactions
+      const allTransactions = await Promise.all(
+        departments.map((dept) =>
+          this.getTransactionsByDepartment(dept.departmentHead)
+        )
       );
+
+      // Count pending transactions (status 0 = PENDING)
+      const pendingTransactions = allTransactions
+        .flat()
+        .filter((tx) => Number(tx.status) === 0).length;
+
+      // Active projects is same as approved proposals
+      const totalProjects = approvedProposals;
 
       return {
         totalDepartments: departments.length,
@@ -955,16 +970,103 @@ export class DepartmentSystemActions {
     }
   }
 
-  // Add method to update total spent
+  // Update the getDepartmentBudgetData method
+  async getDepartmentBudgetData(departmentAddress: string): Promise<{
+    allocated: bigint;
+    spent: bigint;
+    remaining: bigint;
+    efficiency: number;
+  }> {
+    try {
+      // Get department details which includes budget and spent
+      const details = await this.departmentRegistry.getDepartmentDetails(
+        departmentAddress
+      );
+
+      // Convert string values to BigInt
+      const allocated = ethers.parseEther(details.budget.toString());
+      const spent = ethers.parseEther(details.spent.toString());
+
+      // Calculate remaining and efficiency
+      const remaining = allocated - spent;
+      const efficiency = Number(
+        ((Number(spent) / Number(allocated)) * 100).toFixed(2)
+      );
+
+      return {
+        allocated,
+        spent,
+        remaining,
+        efficiency,
+      };
+    } catch (error) {
+      console.error("Failed to get budget data:", error);
+      throw error;
+    }
+  }
+
+  // Update the validateProjectBudget method to handle potential string conversion
+  async validateProjectBudget(
+    departmentAddress: string,
+    amount: string
+  ): Promise<{
+    isValid: boolean;
+    availableBudget: string;
+    message?: string;
+  }> {
+    try {
+      const budgetInfo = await this.getDepartmentBudgetData(departmentAddress);
+      let requestedAmount: bigint;
+
+      try {
+        requestedAmount = ethers.parseEther(amount);
+      } catch (error) {
+        return {
+          isValid: false,
+          availableBudget: ethers.formatEther(budgetInfo.remaining),
+          message: "Invalid amount format",
+        };
+      }
+
+      const availableBudget = budgetInfo.remaining;
+
+      if (requestedAmount > availableBudget) {
+        return {
+          isValid: false,
+          availableBudget: ethers.formatEther(availableBudget),
+          message: `Insufficient budget. Available: ${ethers.formatEther(
+            availableBudget
+          )} ETH`,
+        };
+      }
+
+      return {
+        isValid: true,
+        availableBudget: ethers.formatEther(availableBudget),
+      };
+    } catch (error) {
+      console.error("Failed to validate project budget:", error);
+      throw error;
+    }
+  }
+
+  // Update the updateTotalSpent method to use the contract's existing functions
   async updateTotalSpent(
     departmentAddress: string,
     amount: bigint
   ): Promise<void> {
     try {
-      // Update total spent in smart contract
-      const tx = await this.budgetController.updateTotalSpent(
+      // Get current department details
+      const details = await this.departmentRegistry.getDepartmentDetails(
+        departmentAddress
+      );
+      const currentSpent = ethers.parseEther(details.spent.toString());
+      const newSpent = currentSpent + amount;
+
+      // Update spent amount using the contract's updateDepartmentSpent function
+      const tx = await this.departmentRegistry.updateDepartmentSpent(
         departmentAddress,
-        amount
+        newSpent
       );
       await tx.wait();
 
@@ -979,36 +1081,6 @@ export class DepartmentSystemActions {
       );
     } catch (error) {
       console.error("Failed to update total spent:", error);
-      throw error;
-    }
-  }
-
-  // Add method to get department budget data
-  async getDepartmentBudgetData(departmentAddress: string): Promise<{
-    allocated: bigint;
-    spent: bigint;
-    remaining: bigint;
-    efficiency: number;
-  }> {
-    try {
-      const [allocated, spent] = await Promise.all([
-        this.budgetController.getTotalAllocated(departmentAddress),
-        this.budgetController.getTotalSpent(departmentAddress),
-      ]);
-
-      const remaining = allocated - spent;
-      const efficiency = Number(
-        ((Number(spent) / Number(allocated)) * 100).toFixed(2)
-      );
-
-      return {
-        allocated,
-        spent,
-        remaining,
-        efficiency,
-      };
-    } catch (error) {
-      console.error("Failed to get budget data:", error);
       throw error;
     }
   }
