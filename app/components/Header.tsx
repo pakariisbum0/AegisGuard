@@ -32,6 +32,14 @@ export function Header() {
     return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
   };
 
+  const navigation = [
+    { name: "Home", href: "/" },
+    { name: "Departments", href: "/departments" },
+    { name: "About", href: "/about" },
+    { name: "Activities", href: "/activities" },
+    { name: "DAO", href: "/dao" },
+  ];
+
   return (
     <header className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,17 +54,12 @@ export function Header() {
             </Link>
           </div>
           <nav className="flex items-center gap-8">
-            {[
-              { name: "Home", path: "/" },
-              { name: "Departments", path: "/departments" },
-              { name: "About", path: "/about" },
-              { name: "Activities", path: "/activities" },
-            ].map((item) => (
+            {navigation.map((item) => (
               <Link
                 key={item.name}
-                href={item.path}
+                href={item.href}
                 className={`text-sm transition-colors ${
-                  isActive(item.path)
+                  isActive(item.href)
                     ? "text-blue-600 font-medium"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
