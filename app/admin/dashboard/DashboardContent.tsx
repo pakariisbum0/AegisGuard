@@ -123,7 +123,7 @@ export function DashboardContent() {
           departmentSystem.fetchAllDepartments(),
         ]);
 
-        console.log("departmentMetrics", departmentMetrics);
+        // console.log("departmentMetrics", departmentMetrics);
         setMetrics(departmentMetrics);
         setDepartments(departmentList);
       } catch (error) {

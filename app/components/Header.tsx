@@ -50,7 +50,7 @@ export function Header() {
               { name: "Home", path: "/" },
               { name: "Departments", path: "/departments" },
               { name: "About", path: "/about" },
-              { name: "Reports", path: "/reports" },
+              { name: "Activities", path: "/activities" },
             ].map((item) => (
               <Link
                 key={item.name}

@@ -105,6 +105,7 @@ export default function Home() {
           departmentSystem.fetchAllDepartments(),
         ]);
 
+        console.log("deps", deps);
         // Process departments with USD values
         const departmentsWithUsd = await Promise.all(
           deps.slice(0, 4).map(async (dept) => {
@@ -230,13 +231,8 @@ export default function Home() {
     {
       label: "Total Budget",
       value: metrics
-        ? new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }).format(Number(ethers.formatEther(metrics.totalBudgets)) * 3000)
-        : "Loading...",
+        ? formatUsdValue(ethers.formatEther(metrics.totalBudgets))
+        : "$0",
       icon: Wallet,
     },
     {
@@ -259,8 +255,132 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+      <div className="min-h-screen bg-white">
+        <Header />
+        <main className="pt-16">
+          {/* Hero Section Skeleton */}
+          <div className="bg-white">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+              <div className="max-w-3xl mx-auto text-center space-y-6">
+                <div className="h-12 bg-gray-200 rounded-lg animate-pulse mx-auto max-w-xl" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse mx-auto max-w-md" />
+                <div className="flex gap-4 justify-center">
+                  <div className="w-28 h-10 bg-gray-200 rounded-lg animate-pulse" />
+                  <div className="w-28 h-10 bg-gray-200 rounded-lg animate-pulse" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Stats Section Skeleton */}
+            <div className="py-16 border-b">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-xl p-6 border border-gray-100"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-10 h-10 bg-gray-200 rounded-lg animate-pulse" />
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded animate-pulse w-20 mb-2" />
+                    <div className="h-6 bg-gray-200 rounded animate-pulse w-24" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Departments Section Skeleton */}
+            <div className="py-16 border-b">
+              <div className="flex justify-between items-center mb-12">
+                <div className="h-8 bg-gray-200 rounded animate-pulse w-48" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-32" />
+              </div>
+              <div className="grid md:grid-cols-2 gap-8">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-xl p-6 border border-gray-100"
+                  >
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg animate-pulse" />
+                      <div className="flex-1">
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-2" />
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-5/6" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Activity Section Skeleton */}
+            <div className="py-16 border-b">
+              <div className="flex justify-between items-center mb-12">
+                <div className="h-8 bg-gray-200 rounded animate-pulse w-48" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-32" />
+              </div>
+              <div className="space-y-6">
+                {[...Array(2)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-xl p-6 border border-gray-100"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2 flex-1">
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4" />
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
+                      </div>
+                      <div className="w-24">
+                        <div className="h-6 bg-gray-200 rounded animate-pulse mb-2" />
+                        <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Latest Proposals Section Skeleton */}
+            <div className="py-16 border-b">
+              <div className="flex justify-between items-center mb-12">
+                <div className="h-8 bg-gray-200 rounded animate-pulse w-48" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-32" />
+              </div>
+              <div className="grid md:grid-cols-2 gap-8">
+                {[...Array(2)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-xl p-6 border border-gray-100"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-1/3" />
+                        <div className="h-6 bg-gray-200 rounded animate-pulse w-20" />
+                      </div>
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-24 mb-2" />
+                          <div className="h-6 bg-gray-200 rounded animate-pulse w-32" />
+                        </div>
+                        <div>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-24 mb-2" />
+                          <div className="h-6 bg-gray-200 rounded animate-pulse w-32" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
