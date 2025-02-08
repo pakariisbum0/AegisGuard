@@ -614,7 +614,7 @@ export default function DepartmentDashboard({
                   {activity.status}
                 </span>
                 <Link
-                  href={`https://etherscan.io/tx/${activity.txHash}`}
+                  href={`https://evm-testnet.flowscan.io/tx/${activity.txHash}`}
                   target="_blank"
                   className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
                 >

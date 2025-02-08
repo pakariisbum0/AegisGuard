@@ -1,74 +1,133 @@
+"use client";
+
 import Image from "next/image";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { ProposalCard } from "./components/ProposalCard";
 import { DepartmentCard } from "./components/DepartmentCard";
 import { Header } from "./components/Header";
+import { useState, useEffect } from "react";
+import {
+  DepartmentSystemActions,
+  DepartmentMetrics,
+} from "@/lib/contracts/actions";
 
 const inter = Inter({ subsets: ["latin"] });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
-const departments = [
-  {
-    name: "Department of Defense",
-    budget: "$773.1B",
-    projects: "21,345",
-    utilization: "98.2%",
-    logo: "/images/dod-logo.png",
-    bgColor: "bg-[#1B2C4E]",
-  },
-  {
-    name: "Department of Health & Human Services",
-    budget: "$1.7T",
-    projects: "15,234",
-    utilization: "96.8%",
-    logo: "/images/doh.png",
-    bgColor: "bg-[#0071BC]",
-  },
-  {
-    name: "NASA",
-    budget: "$24.5B",
-    projects: "12,458",
-    utilization: "94.2%",
-    logo: "/images/nasa.png",
-    bgColor: "bg-[#1A5DAD]",
-  },
-  {
-    name: "Department of Education",
-    budget: "$79.8B",
-    projects: "8,765",
-    utilization: "92.5%",
-    logo: "/images/doe.png",
-    bgColor: "bg-[#2E4E87]",
-  },
-];
-
-const stats = [
-  {
-    label: "Total Budget",
-    value: "$1.2T",
-    change: "+12.3%",
-    trend: "up",
-  },
-  {
-    label: "Departments",
-    value: "45+",
-    change: "+2",
-    trend: "up",
-  },
-  {
-    label: "Active Projects",
-    value: "12,458",
-    change: "-234",
-    trend: "down",
-  },
-  {
-    label: "Q2 2024",
-    value: "94%",
-    subtitle: "Budget Utilized",
-  },
-];
-
 export default function Home() {
+  const [metrics, setMetrics] = useState<DepartmentMetrics | null>(null);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { provider, signer } =
+          await DepartmentSystemActions.connectWallet();
+        const departmentSystem = new DepartmentSystemActions(provider, signer);
+
+        // Fetch metrics and departments in parallel
+        const [departmentMetrics, deps] = await Promise.all([
+          departmentSystem.getDepartmentMetrics(),
+          departmentSystem.fetchAllDepartments(),
+        ]);
+
+        // Process departments with USD values
+        const departmentsWithUsd = await Promise.all(
+          deps.slice(0, 4).map(async (dept) => {
+            const proposals = await departmentSystem.getProposalsByDepartment(
+              dept.departmentHead
+            );
+            const approvedProjects = proposals.filter(
+              (p: any) => Number(p.status) === 2
+            ).length;
+
+            return {
+              name: dept.name,
+              budget: await departmentSystem.convertEthToUsd(dept.budget),
+              projects: approvedProjects,
+              utilization: dept.efficiency + "%",
+              logo: dept.logoUri || "/images/default-department.png",
+            };
+          })
+        );
+
+        // Get recent activity
+        const allActivity = await Promise.all(
+          deps.map((dept) =>
+            departmentSystem.getDepartmentDetailsBySlug(
+              dept.name.toLowerCase().replace(/ /g, "-")
+            )
+          )
+        );
+
+        const recentActivities = allActivity
+          .flatMap((dept) => dept.recentActivity)
+          .sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          )
+          .slice(0, 2);
+
+        setMetrics(departmentMetrics);
+        setDepartments(departmentsWithUsd);
+        setRecentActivity(recentActivities);
+      } catch (err) {
+        console.error("Failed to fetch data:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  console.log("metrics", metrics);
+  const stats = [
+    {
+      label: "Total Budget",
+      value: metrics
+        ? `$${((Number(metrics.totalBudgets) / 1e18) * 3000).toLocaleString(
+            "en-US",
+            {
+              maximumFractionDigits: 0,
+            }
+          )}`
+        : "Loading...",
+      change: "+12.3%",
+      trend: "up",
+    },
+    {
+      label: "Departments",
+      value: metrics ? `${metrics.totalDepartments}+` : "Loading...",
+      change: "+2",
+      trend: "up",
+    },
+    {
+      label: "Active Projects",
+      value: metrics ? metrics.approvedProposals.toString() : "Loading...",
+      change: "-234",
+      trend: "down",
+    },
+    {
+      label: "Pending Proposals",
+      value: metrics ? metrics.pendingProposals.toString() : "Loading...",
+      change: metrics ? `+${metrics.pendingProposals}` : "+0",
+      trend: "up",
+      subtitle: "Awaiting Review",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-white ${inter.className}`}>
       <Header />
@@ -149,7 +208,7 @@ export default function Home() {
                 Departments
               </h2>
               <a
-                href="#"
+                href="/departments"
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
                 View All Departments →
@@ -180,66 +239,56 @@ export default function Home() {
 
             {/* Show only 2 most recent transactions */}
             <div className="space-y-6">
-              {[
-                {
-                  department: "Department of Defense",
-                  action: "Budget Allocation",
-                  amount: "$50M",
-                  status: "Approved",
-                  date: "2024-03-15",
-                  txHash: "0x1234...5678",
-                },
-                {
-                  department: "NASA",
-                  action: "Expenditure",
-                  amount: "$2.5M",
-                  status: "Completed",
-                  date: "2024-03-14",
-                  txHash: "0x8765...4321",
-                },
-              ]
-                .slice(0, 2)
-                .map((item, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-xl p-6 border border-gray-100 hover:border-gray-200 transition-all duration-300 relative overflow-hidden group"
-                  >
-                    <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-blue-500/20 to-violet-500/20" />
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {item.department}
-                        </h3>
-                        <p className="text-sm text-gray-500">{item.action}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">
-                          {item.amount}
-                        </p>
-                        <p className="text-sm text-gray-500">{item.date}</p>
-                      </div>
+              {recentActivity.map((item, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-xl p-6 border border-gray-100 hover:border-gray-200 transition-all duration-300 relative overflow-hidden group"
+                >
+                  <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-blue-500/20 to-violet-500/20" />
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {item.type}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {item.description}
+                      </p>
                     </div>
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs ${
-                            item.status === "Approved"
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-blue-50 text-blue-600"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                        <span className="text-sm text-gray-400">
-                          Tx: {item.txHash}
-                        </span>
-                      </div>
-                      <button className="text-sm text-blue-600 hover:text-blue-700">
-                        View Details →
-                      </button>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-gray-900">
+                        {`$${(Number(item.amount) * 3000).toLocaleString(
+                          "en-US",
+                          {
+                            maximumFractionDigits: 0,
+                          }
+                        )}`}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(item.date).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                ))}
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs ${
+                          item.status === "Completed"
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-blue-50 text-blue-600"
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                      <span className="text-sm text-gray-400">
+                        Tx: {item.txHash.slice(0, 6)}...{item.txHash.slice(-4)}
+                      </span>
+                    </div>
+                    <button className="text-sm text-blue-600 hover:text-blue-700">
+                      View Details →
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

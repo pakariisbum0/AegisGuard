@@ -57,10 +57,23 @@ export default function DepartmentsPage() {
         // Get ETH/USD rate and convert budgets
         const ethRate = await departmentSystem.getEthToUsdRate();
         const departmentsWithUsd = await Promise.all(
-          deps.map(async (dept) => ({
-            ...dept,
-            budgetUsd: await departmentSystem.convertEthToUsd(dept.budget),
-          }))
+          deps.map(async (dept) => {
+            // Get all proposals for this department
+            const proposals = await departmentSystem.getProposalsByDepartment(
+              dept.departmentHead
+            );
+
+            // Count approved proposals as projects
+            const approvedProjects = proposals.filter(
+              (p: any) => Number(p.status) === 2 // 2 = APPROVED status
+            ).length;
+
+            return {
+              ...dept,
+              budgetUsd: await departmentSystem.convertEthToUsd(dept.budget),
+              projects: approvedProjects, // Update projects count with approved proposals
+            };
+          })
         );
 
         setDepartments(departmentsWithUsd);

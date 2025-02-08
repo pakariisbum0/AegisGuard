@@ -7,16 +7,54 @@ import { useState, useEffect } from "react";
 import {
   DepartmentSystemActions,
   DepartmentDetails,
+  DepartmentMetrics,
 } from "@/lib/contracts/actions";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Wallet, Building2, BarChart3, FileCheck } from "lucide-react";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
-// Add this interface for our quick actions
-interface QuickAction {
-  label: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}
+// Add the formatTimeAgo helper
+const formatTimeAgo = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// Add the status color helper
+const getStatusColor = (status: string): string => {
+  switch (status.toLowerCase()) {
+    case "approved":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case "pending":
+      return "bg-yellow-50 text-yellow-700 border-yellow-200";
+    case "rejected":
+      return "bg-red-50 text-red-700 border-red-200";
+    default:
+      return "bg-gray-50 text-gray-700 border-gray-200";
+  }
+};
 
 // Add this skeleton component at the top of the file
 function DepartmentDetailsSkeleton() {
@@ -98,6 +136,133 @@ function DepartmentDetailsSkeleton() {
   );
 }
 
+// Add this component inside the DepartmentPage component
+const BudgetOverview = ({ department }: { department: DepartmentDetails }) => {
+  // Calculate monthly budget data
+  const calculateMonthlyData = () => {
+    const currentDate = new Date();
+    const months = [];
+    const usdRate = 3000; // Using the same rate as formatUsdValue
+
+    // Get total budget and spent values in USD
+    const totalBudgetUsd = Number(
+      department.budget.usd.replace(/[^0-9.-]+/g, "")
+    );
+    const totalSpentUsd =
+      (totalBudgetUsd * Number(department.utilization.replace("%", ""))) / 100;
+
+    // Only show February data
+    for (let i = 7; i >= 0; i--) {
+      const date = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth() - i,
+        1
+      );
+      const monthName = date.toLocaleString("default", { month: "short" });
+
+      months.push({
+        month: monthName,
+        allocated: monthName === "Feb" ? totalBudgetUsd : 0, // Only show budget for February
+        spent: monthName === "Feb" ? totalSpentUsd : 0, // Only show spent for February
+      });
+    }
+    return months;
+  };
+
+  const data = calculateMonthlyData();
+
+  return (
+    <div className="bg-white rounded-xl p-6 border border-gray-100">
+      <div className="flex justify-between items-center mb-6">
+        <h2
+          className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+        >
+          Budget Overview
+        </h2>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-3 h-3 rounded-full bg-black" />
+            <span className="text-gray-600">Allocated</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-3 h-3 rounded-full bg-gray-400" />
+            <span className="text-gray-600">Spent</span>
+          </div>
+        </div>
+      </div>
+      <div className="h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="month"
+              tick={{ fill: "#6B7280", fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fill: "#6B7280", fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#fff",
+                border: "1px solid #E5E7EB",
+                borderRadius: "0.5rem",
+              }}
+              formatter={(value: number) => [
+                `$${new Intl.NumberFormat("en-US").format(value)}`,
+                "",
+              ]}
+            />
+            <Bar
+              dataKey="allocated"
+              fill="#111827"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={40}
+            />
+            {/* <Bar
+              dataKey="spent"
+              fill="#9CA3AF"
+              radius={[4, 4, 0, 0]}
+              maxBarSize={40}
+            /> */}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-4">
+        {[
+          {
+            label: "Total Allocated",
+            value: department.budget.usd,
+          },
+          {
+            label: "Total Spent",
+            value: `$0.0`,
+          },
+          {
+            label: "Efficiency Rate",
+            value: department.utilization,
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+          >
+            <p className="text-sm text-gray-500">{stat.label}</p>
+            <p className="text-lg font-semibold text-gray-900">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function DepartmentPage({
   params,
 }: {
@@ -106,33 +271,36 @@ export default function DepartmentPage({
   const [department, setDepartment] = useState<DepartmentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<DepartmentMetrics | null>(null);
 
   useEffect(() => {
-    const fetchDepartmentDetails = async () => {
+    const fetchData = async () => {
       try {
         const { provider, signer } =
           await DepartmentSystemActions.connectWallet();
         const departmentSystem = new DepartmentSystemActions(provider, signer);
-        const details = await departmentSystem.getDepartmentDetailsBySlug(
-          params.slug
-        );
+
+        // Fetch both department details and metrics
+        const [details, departmentMetrics] = await Promise.all([
+          departmentSystem.getDepartmentDetailsBySlug(params.slug),
+          departmentSystem.getDepartmentMetrics(),
+        ]);
+
         setDepartment(details);
+        setMetrics(departmentMetrics);
       } catch (err) {
-        console.error("Failed to fetch department details:", err);
+        console.error("Failed to fetch department data:", err);
         setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to fetch department details"
+          err instanceof Error ? err.message : "Failed to fetch department data"
         );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDepartmentDetails();
+    fetchData();
   }, [params.slug]);
 
-  // Update the loading state to use the skeleton
   if (loading) {
     return (
       <>
@@ -150,9 +318,10 @@ export default function DepartmentPage({
         <Header />
         <main className="pt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {error || "Department not found"}
-            </h1>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <h1 className="text-lg font-medium text-red-800">Error</h1>
+              <p className="text-red-600">{error || "Department not found"}</p>
+            </div>
           </div>
         </main>
       </>
@@ -162,170 +331,118 @@ export default function DepartmentPage({
   return (
     <>
       <Header />
-      <main className="pt-16 bg-gray-50">
-        {/* Hero Section with Department Info */}
+      <main className="pt-16 bg-gray-50 min-h-screen">
+        {/* Department Header */}
         <div className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-6">
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                  <Image
-                    src={department.logo}
-                    alt={department.name}
-                    width={64}
-                    height={64}
-                    className="rounded-lg"
-                  />
-                </div>
-                <div>
-                  <h1
-                    className={`text-3xl font-bold text-gray-900 ${spaceGrotesk.className}`}
-                  >
-                    {department.name}
-                  </h1>
-                  <p className="text-gray-500">Fiscal Year 2025</p>
-                </div>
+            <div className="flex items-center gap-6">
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <Image
+                  src={department.logo}
+                  alt={department.name}
+                  width={64}
+                  height={64}
+                  className="rounded-lg"
+                />
+              </div>
+              <div>
+                <h1
+                  className={`text-3xl font-bold text-gray-900 ${spaceGrotesk.className}`}
+                >
+                  {department.name}
+                </h1>
+                <p className="text-gray-500">Fiscal Year 2025</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* Quick Stats Row */}
+          {/* Metrics Grid */}
           <div className="grid grid-cols-4 gap-6 mb-12">
             {[
-              { label: "Total Budget", value: department.budget.usd },
-              { label: "Active Projects", value: department.projects },
-              { label: "Budget Utilized", value: department.utilization },
+              {
+                label: "Total Budget",
+                value: department.budget.usd,
+                icon: Wallet,
+              },
+              {
+                label: "Active Projects",
+                value: metrics?.approvedProposals || "0",
+                icon: Building2,
+              },
+              {
+                label: "Budget Utilized",
+                value: department.utilization,
+                icon: BarChart3,
+              },
               {
                 label: "Pending Proposals",
-                value: department.proposals
-                  .filter((p) =>
-                    ["pending", "review"].some((status) =>
-                      p.status.toLowerCase().includes(status)
-                    )
-                  )
-                  .length.toString(),
+                value: metrics?.pendingProposals || "0",
+                icon: FileCheck,
               },
-            ].map((metric) => (
+            ].map((stat) => (
               <div
-                key={metric.label}
-                className="bg-white rounded-xl p-6 border border-gray-100 hover:border-gray-200 transition-all duration-300"
+                key={stat.label}
+                className="bg-white rounded-xl p-6 border border-gray-100"
               >
-                <p className="text-sm text-gray-500 mb-1">{metric.label}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {metric.value}
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-gray-50">
+                    <stat.icon className="w-5 h-5 text-gray-600" />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500">{stat.label}</p>
+                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
               </div>
             ))}
           </div>
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-3 gap-8">
-            {/* Left Column - Budget & Performance */}
+            {/* Left Column - Budget & Projects */}
             <div className="col-span-2 space-y-8">
-              {/* Budget Breakdown */}
-              <div className="bg-white rounded-xl p-6 border border-gray-100">
-                <h2
-                  className={`text-xl font-bold text-gray-900 mb-6 ${spaceGrotesk.className}`}
-                >
-                  Budget Breakdown
-                </h2>
-                <div className="space-y-4">
-                  {[
-                    {
-                      category: "Personnel",
-                      amount: "$245.8B",
-                      percentage: "31.8%",
-                      change: "+2.3%",
-                      trend: "up",
-                    },
-                    {
-                      category: "Operations & Maintenance",
-                      amount: "$198.2B",
-                      percentage: "25.6%",
-                      change: "+1.8%",
-                      trend: "up",
-                    },
-                    {
-                      category: "Research & Development",
-                      amount: "$140.5B",
-                      percentage: "18.2%",
-                      change: "-0.5%",
-                      trend: "down",
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.category}
-                      className="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div>
-                        <h3 className="font-medium text-gray-900">
-                          {item.category}
-                        </h3>
-                        <span
-                          className={`text-sm ${
-                            item.trend === "up"
-                              ? "text-emerald-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {item.trend === "up" ? "↑" : "↓"} {item.change} from
-                          FY2023
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">
-                          {item.amount}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {item.percentage}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Budget Overview */}
+              <BudgetOverview department={department} />
 
-              {/* Key Projects */}
+              {/* Active Projects */}
               <div className="bg-white rounded-xl p-6 border border-gray-100">
                 <div className="flex justify-between items-center mb-6">
                   <h2
                     className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
                   >
-                    Key Projects
+                    Active Projects
                   </h2>
-                  <button className="text-sm text-blue-600 hover:text-blue-700">
-                    View All Projects →
-                  </button>
                 </div>
                 <div className="space-y-4">
-                  {department.proposals.map((project, i) => (
+                  {department.activeProposals.map((project, index) => (
                     <div
-                      key={i}
-                      className="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-all duration-300"
+                      key={index}
+                      className="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-all duration-200"
                     >
-                      <div className="flex justify-between items-start mb-3">
+                      <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-medium text-gray-900">
                             {project.title}
                           </h3>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Submitted on{" "}
-                            {new Date(
-                              project.submittedDate
-                            ).toLocaleDateString()}
+                          <p className="text-sm text-gray-500">
+                            Submitted {formatTimeAgo(project.submittedDate)}
                           </p>
                         </div>
-                        <span className="px-3 py-1 text-xs rounded-full bg-emerald-50 text-emerald-600">
+                        <span
+                          className={`px-2.5 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(
+                            project.status
+                          )}`}
+                        >
                           {project.status}
                         </span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Budget</span>
-                        <span className="font-medium text-gray-900">
-                          {project.amount}
-                        </span>
+                      <div className="mt-3 flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Amount:</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {project.amount}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -333,93 +450,44 @@ export default function DepartmentPage({
               </div>
             </div>
 
-            {/* Right Column - Activity & Metrics */}
+            {/* Right Column - Activity */}
             <div className="space-y-8">
-              {/* Performance Metrics */}
+              {/* Recent Activity */}
               <div className="bg-white rounded-xl p-6 border border-gray-100">
                 <h2
                   className={`text-xl font-bold text-gray-900 mb-6 ${spaceGrotesk.className}`}
                 >
-                  Performance
+                  Recent Activity
                 </h2>
-                <div className="space-y-6">
-                  {[
-                    {
-                      metric: "Budget Efficiency",
-                      value: "94.5%",
-                      target: "90%",
-                      status: "Above Target",
-                    },
-                    {
-                      metric: "Project Completion",
-                      value: "87.2%",
-                      target: "85%",
-                      status: "On Target",
-                    },
-                    {
-                      metric: "Resource Utilization",
-                      value: "91.8%",
-                      target: "95%",
-                      status: "Below Target",
-                    },
-                  ].map((metric) => (
-                    <div key={metric.metric} className="space-y-2">
-                      <div className="flex justify-between items-baseline">
+                <div className="space-y-4">
+                  {department.recentActivity.map((activity, index) => (
+                    <div
+                      key={index}
+                      className="p-4 border border-gray-100 rounded-lg"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {activity.type}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {activity.amount}
+                          </p>
+                        </div>
                         <span className="text-sm text-gray-500">
-                          {metric.metric}
-                        </span>
-                        <span className="text-lg font-bold text-gray-900">
-                          {metric.value}
+                          {formatTimeAgo(activity.date)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">
-                          Target: {metric.target}
-                        </span>
+                      <div className="mt-2">
                         <span
-                          className={`px-2 py-0.5 rounded-full ${
-                            metric.status === "Above Target"
-                              ? "bg-emerald-50 text-emerald-600"
-                              : metric.status === "On Target"
-                              ? "bg-blue-50 text-blue-600"
-                              : "bg-red-50 text-red-600"
+                          className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                            activity.status === "Completed"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-yellow-50 text-yellow-700"
                           }`}
                         >
-                          {metric.status}
+                          {activity.status}
                         </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="bg-white rounded-xl p-6 border border-gray-100">
-                <div className="flex justify-between items-center mb-6">
-                  <h2
-                    className={`text-xl font-bold text-gray-900 ${spaceGrotesk.className}`}
-                  >
-                    Recent Activity
-                  </h2>
-                  <button className="text-sm text-blue-600 hover:text-blue-700">
-                    View All →
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  {department.transactions.map((tx, i) => (
-                    <div
-                      key={i}
-                      className="flex justify-between items-start p-3 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {tx.description}
-                        </p>
-                        <p className="text-sm text-gray-500">{tx.date}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">{tx.amount}</p>
-                        <p className="text-sm text-emerald-600">{tx.status}</p>
                       </div>
                     </div>
                   ))}
