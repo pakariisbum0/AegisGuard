@@ -1,8 +1,7 @@
 {
-  "DepartmentSystem#DepartmentRegistry": "0xBCb853678A12aEFA9B074aBB480513a80C220889",
-  "DepartmentSystem#GovernanceToken": "0x69c7C410A824176d7Fb2CE7b6a7458DfBE6D1ee2",
-  "DepartmentSystem#ActivityTracker": "0x6349Aa4C321d5f4525Bc7A7284e00f62d6e707A1",
-  "DepartmentSystem#BudgetDAO": "0x79476b9e0DF75BC1B0a534A334469dab2a7ad9B4",
-  "DepartmentSystem#ProposalManager": "0xEFc87ADB2eE3F6ea8ed23D566011c85141272b3e",
-  "DepartmentSystem#BudgetController": "0xe24c772AF0FB1CA8680C2947848a5DF4F6FD1413"
+  "DepartmentSystem#DepartmentRegistry": "0x17E55fcaB581B9C09180D1C7E61aDc8CDBB770b5",
+  "DepartmentSystem#GovernanceToken": "0xb6046fe3C6610F09AE21468b3AD0FFE0a577FC80",
+  "DepartmentSystem#BudgetDAO": "0xE7e79aDF7e419F166ECcb3a4243622A9a4ED9489",
+  "DepartmentSystem#ProposalManager": "0x1c53520e84F5FB138b4AC1BDC1EF846D186cd4f7",
+  "DepartmentSystem#ActivityTracker": "0xe828a04F34faa1CCa116927f02a43A951df32cD9"
 }
