@@ -13,6 +13,7 @@ import {
   XCircle,
   AlertCircle,
 } from "lucide-react";
+import Image from "next/image";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
@@ -22,6 +23,7 @@ interface AdminStats {
   pendingApprovals: number;
   totalProjects: number;
   pendingProposals: number;
+  approvedProposals: number;
 }
 
 interface PendingApproval {
@@ -32,6 +34,7 @@ interface PendingApproval {
   description: string;
   timestamp: string;
   departmentName: string;
+  departmentLogo: string;
 }
 
 interface PendingProposal {
@@ -40,9 +43,12 @@ interface PendingProposal {
   title: string;
   amount: string;
   description: string;
+  timeline: string;
+  objectives: string;
   submittedDate: string;
   category: string;
   departmentName: string;
+  departmentLogo: string;
 }
 
 export function DashboardContent() {
@@ -91,6 +97,7 @@ export function DashboardContent() {
             return transactions.map((tx) => ({
               ...tx,
               departmentName: dept.name,
+              departmentLogo: dept.logoUri,
             }));
           })
         );
@@ -120,9 +127,12 @@ export function DashboardContent() {
                 id: p.id.toString(),
                 department: dept.departmentHead,
                 departmentName: dept.name,
+                departmentLogo: dept.logoUri,
                 title: p.title,
                 amount: p.amount,
                 description: p.description,
+                timeline: p.timeline,
+                objectives: p.objectives,
                 submittedDate: p.submittedDate,
                 category: p.category,
               }));
@@ -139,12 +149,41 @@ export function DashboardContent() {
           0
         );
 
+        // Count approved proposals across all departments
+        const allApprovedProposals = await Promise.all(
+          departments.map(async (dept) => {
+            console.log(`Checking approved proposals for ${dept.name}`);
+            const proposals = await departmentSystem.getProposalsByDepartment(
+              dept.departmentHead
+            );
+            console.log(`Raw proposals for ${dept.name}:`, proposals);
+
+            const approved = proposals.filter((p) => {
+              console.log(`Proposal status check:`, {
+                id: p.id,
+                status: p.status,
+                isApproved: p.status === "APPROVED",
+              });
+              return p.status === "APPROVED";
+            });
+
+            console.log(
+              `Found ${approved.length} approved proposals for ${dept.name}`
+            );
+            return approved;
+          })
+        );
+
+        const totalApprovedProposals = allApprovedProposals.flat().length;
+        console.log("Total approved proposals:", totalApprovedProposals);
+
         setStats({
           totalDepartments: departments.length,
           totalBudgetAllocated: totalBudgetUsd,
           pendingApprovals: flatPendingTransactions.length,
           totalProjects: totalProjects,
           pendingProposals: flatPendingProposals.length,
+          approvedProposals: totalApprovedProposals,
         });
 
         setPendingApprovals(flatPendingTransactions);
@@ -280,10 +319,16 @@ export function DashboardContent() {
                 color: "bg-blue-50 text-blue-600",
               },
               {
-                label: "Total Budget Allocated",
+                label: "Total Budgets",
                 value: stats.totalBudgetAllocated,
                 icon: <BarChart3 className="w-6 h-6" />,
                 color: "bg-green-50 text-green-600",
+              },
+              {
+                label: "Approved Proposals",
+                value: stats.approvedProposals,
+                icon: <CheckCircle2 className="w-6 h-6" />,
+                color: "bg-emerald-50 text-emerald-600",
               },
               {
                 label: "Total Projects",
@@ -323,6 +368,118 @@ export function DashboardContent() {
             ))}
         </div>
 
+        {/* Pending Proposals Section */}
+        <div className="bg-white rounded-xl p-6 border border-gray-100">
+          <h2
+            className={`text-xl font-bold text-gray-900 mb-6 ${spaceGrotesk.className}`}
+          >
+            Pending Proposals
+          </h2>
+          <div className="space-y-4">
+            {pendingProposals.length > 0 ? (
+              pendingProposals.map((proposal) => (
+                <div
+                  key={proposal.id}
+                  className="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex gap-4">
+                      <div className="shrink-0">
+                        <Image
+                          src={proposal.departmentLogo}
+                          alt={proposal.departmentName}
+                          width={48}
+                          height={48}
+                          className="rounded-lg border border-gray-100"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="font-medium text-gray-900">
+                          {proposal.title}
+                        </h3>
+                        <div className="space-y-1">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Description:</span>{" "}
+                            {proposal.description}
+                          </p>
+                          {proposal.timeline && (
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Timeline:</span>{" "}
+                              {proposal.timeline}
+                            </p>
+                          )}
+                          {proposal.objectives && (
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Objectives:</span>{" "}
+                              {proposal.objectives}
+                            </p>
+                          )}
+                          <div className="flex gap-4">
+                            <p className="text-sm text-gray-500">
+                              <span className="font-medium">Department:</span>{" "}
+                              {proposal.departmentName}
+                            </p>
+                            {proposal.category && (
+                              <p className="text-sm text-gray-500">
+                                <span className="font-medium">Category:</span>{" "}
+                                {proposal.category}
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            <span className="font-medium">Submitted:</span>{" "}
+                            {new Date(
+                              proposal.submittedDate
+                            ).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleApproveProposal(proposal.id)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Approve Proposal"
+                      >
+                        <CheckCircle2 className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleRejectProposal(proposal.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Reject Proposal"
+                      >
+                        <XCircle className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-100">
+                    <span className="text-gray-500">Requested Amount</span>
+                    <span className="font-medium text-gray-900">
+                      {proposal.amount} ETH
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <div className="bg-gray-50 rounded-full w-12 h-12 mx-auto flex items-center justify-center mb-4">
+                  <AlertCircle className="w-6 h-6 text-gray-400" />
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 mb-1">
+                  No Pending Proposals
+                </h3>
+                <p className="text-sm text-gray-500">
+                  All proposals have been reviewed
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Pending Approvals Section */}
         <div className="bg-white rounded-xl p-6 border border-gray-100 mb-8">
           <h2
@@ -335,19 +492,30 @@ export function DashboardContent() {
               pendingApprovals.map((approval) => (
                 <div
                   key={approval.id}
-                  className="p-4 border border-gray-100 rounded-lg"
+                  className="p-4 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors"
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-medium text-gray-900">
-                        {approval.type}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {approval.description}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Department: {approval.departmentName}
-                      </p>
+                    <div className="flex gap-4">
+                      <div className="shrink-0">
+                        <Image
+                          src={approval.departmentLogo}
+                          alt={approval.departmentName}
+                          width={48}
+                          height={48}
+                          className="rounded-lg border border-gray-100"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          {approval.type}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {approval.description}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Department: {approval.departmentName}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -382,74 +550,6 @@ export function DashboardContent() {
                 </h3>
                 <p className="text-sm text-gray-500">
                   All transactions have been processed
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Pending Proposals Section */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100">
-          <h2
-            className={`text-xl font-bold text-gray-900 mb-6 ${spaceGrotesk.className}`}
-          >
-            Pending Proposals
-          </h2>
-          <div className="space-y-4">
-            {pendingProposals.length > 0 ? (
-              pendingProposals.map((proposal) => (
-                <div
-                  key={proposal.id}
-                  className="p-4 border border-gray-100 rounded-lg"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-medium text-gray-900">
-                        {proposal.title}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {proposal.description}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Department: {proposal.departmentName}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Category: {proposal.category}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleApproveProposal(proposal.id)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                      >
-                        <CheckCircle2 className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleRejectProposal(proposal.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <XCircle className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500">Amount</span>
-                    <span className="font-medium text-gray-900">
-                      {proposal.amount} ETH
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <div className="bg-gray-50 rounded-full w-12 h-12 mx-auto flex items-center justify-center mb-4">
-                  <AlertCircle className="w-6 h-6 text-gray-400" />
-                </div>
-                <h3 className="text-sm font-medium text-gray-900 mb-1">
-                  No Pending Proposals
-                </h3>
-                <p className="text-sm text-gray-500">
-                  All proposals have been reviewed
                 </p>
               </div>
             )}

@@ -291,18 +291,53 @@ export class DepartmentSystemActions {
       console.log("Raw proposals from contract:", proposals);
 
       // Map and filter the proposals
-      const mappedProposals = proposals.map((p: any) => ({
-        id: p.id.toString(),
-        title: p.title,
-        amount: ethers.formatEther(p.amount),
-        status: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][
-          Number(p.status)
-        ],
-        description: p.description,
-        submittedDate: new Date(Number(p.timestamp) * 1000).toISOString(),
-      }));
+      const mappedProposals = proposals.map((p: any) => {
+        // Log raw status value
+        console.log("Raw proposal status:", {
+          id: p.id.toString(),
+          rawStatus: p.status,
+          mappedStatus: ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][
+            Number(p.status) || 0
+          ],
+        });
 
-      console.log("Mapped proposals:", mappedProposals);
+        // Safely handle timestamp conversion
+        let submittedDate;
+        try {
+          const timestamp = Number(p.timestamp) * 1000;
+          submittedDate = new Date(timestamp).toISOString();
+        } catch (error) {
+          submittedDate = new Date().toISOString();
+        }
+
+        // Parse the description JSON if it exists
+        let parsedDescription;
+        let category = "";
+        try {
+          parsedDescription = JSON.parse(p.description);
+          category = parsedDescription.category || "";
+        } catch (error) {
+          parsedDescription = { description: p.description };
+        }
+
+        const status = ["PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED"][
+          Number(p.status) || 0
+        ];
+
+        return {
+          id: p.id.toString(),
+          title: p.title || "Untitled Proposal",
+          amount: ethers.formatEther(p.amount || 0),
+          status,
+          description: parsedDescription.description || "",
+          timeline: parsedDescription.timeline || "",
+          objectives: parsedDescription.objectives || "",
+          category: category,
+          submittedDate,
+        };
+      });
+
+      console.log("Mapped proposals with statuses:", mappedProposals);
       return mappedProposals;
     } catch (error) {
       console.error("Failed to get proposals:", error);
@@ -782,17 +817,34 @@ export class DepartmentSystemActions {
           // Check if the transaction is pending (status should be 0)
           return Number(tx.status) === 0;
         })
-        .map((tx: any) => ({
-          id: tx.id.toString(),
-          department: tx.department,
-          type: TransactionType[tx.txType],
-          amount: ethers.formatEther(tx.amount),
-          description: tx.description,
-          status: TransactionStatus[tx.status],
-          timestamp: new Date(Number(tx.timestamp) * 1000).toISOString(),
-          from: tx.department,
-          to: tx.department,
-        }));
+        .map((tx: any) => {
+          // Safely handle timestamp conversion
+          let timestamp;
+          try {
+            // Ensure timestamp is treated as milliseconds
+            const txTimestamp = Number(tx.timestamp) * 1000; // Convert seconds to milliseconds
+            timestamp = new Date(txTimestamp).toISOString();
+          } catch (error) {
+            console.warn(
+              "Invalid timestamp for transaction:",
+              tx.id,
+              tx.timestamp
+            );
+            timestamp = new Date().toISOString(); // Fallback to current time
+          }
+
+          return {
+            id: tx.id.toString(),
+            department: tx.department,
+            type: TransactionType[tx.txType] || "UNKNOWN",
+            amount: ethers.formatEther(tx.amount || 0),
+            description: tx.description || "",
+            status: TransactionStatus[tx.status] || "PENDING",
+            timestamp,
+            from: tx.department,
+            to: tx.department,
+          };
+        });
 
       console.log("Filtered pending transactions:", pending);
       return pending;
