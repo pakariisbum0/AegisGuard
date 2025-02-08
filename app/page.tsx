@@ -613,38 +613,6 @@ export default function Home() {
               )}
             </div>
           </div>
-
-          {/* 5. AI Monitoring Section */}
-          <div className="py-16">
-            <div className="bg-white rounded-xl p-8 border border-gray-100">
-              <h2
-                className={`text-2xl font-bold text-gray-900 mb-4 ${spaceGrotesk.className}`}
-              >
-                AI-Powered Monitoring
-              </h2>
-              <p className="text-gray-600 mb-8">
-                Our AI system continuously monitors transactions for anomalies
-                and ensures spending compliance.
-              </p>
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  { label: "Transactions Monitored", value: "1.2M+" },
-                  { label: "Anomalies Detected", value: "142" },
-                  { label: "Accuracy Rate", value: "99.9%" },
-                ].map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="bg-gray-50 p-4 rounded-lg border border-gray-100"
-                  >
-                    <p className="text-sm text-gray-500">{stat.label}</p>
-                    <p className="text-lg font-medium text-gray-900">
-                      {stat.value}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </main>
 

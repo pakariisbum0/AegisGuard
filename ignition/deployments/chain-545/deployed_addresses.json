@@ -3,5 +3,6 @@
   "DepartmentSystem#GovernanceToken": "0xb6046fe3C6610F09AE21468b3AD0FFE0a577FC80",
   "DepartmentSystem#BudgetDAO": "0xE7e79aDF7e419F166ECcb3a4243622A9a4ED9489",
   "DepartmentSystem#ProposalManager": "0x1c53520e84F5FB138b4AC1BDC1EF846D186cd4f7",
-  "DepartmentSystem#ActivityTracker": "0xe828a04F34faa1CCa116927f02a43A951df32cD9"
+  "DepartmentSystem#ActivityTracker": "0xe828a04F34faa1CCa116927f02a43A951df32cD9",
+  "DepartmentSystem#BudgetController": "0xD62117BF59c242FCe383afcD6BaB176B060c5C11"
 }
