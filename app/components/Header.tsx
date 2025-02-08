@@ -49,6 +49,7 @@ export function Header() {
             {[
               { name: "Home", path: "/" },
               { name: "Departments", path: "/departments" },
+              { name: "About", path: "/about" },
               { name: "Reports", path: "/reports" },
             ].map((item) => (
               <Link

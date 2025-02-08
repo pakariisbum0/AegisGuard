@@ -2,28 +2,34 @@
 
 import { Space_Grotesk } from "next/font/google";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
 interface ProposalCardProps {
   department: string;
+  departmentLogo?: string;
   amount: string;
   status: string;
   submittedDate: string;
   category: string;
   description?: string;
-  progress?: number;
+  timeline?: string;
+  objectives?: string;
 }
 
 export function ProposalCard({
   department,
+  departmentLogo = "/images/default-department.png",
   amount,
   status,
   submittedDate,
   category,
   description,
-  progress = 0,
+  timeline,
+  objectives,
 }: ProposalCardProps) {
+  console.log(departmentLogo);
   const router = useRouter();
 
   const getStatusColor = (status: string) => {
@@ -39,72 +45,95 @@ export function ProposalCard({
     }
   };
 
+  // Format the date to be more readable
+  const formattedDate = new Date(submittedDate).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
   return (
     <div
       className="bg-white rounded-xl p-6 border border-gray-100 hover:border-gray-200 transition-all duration-300 group cursor-pointer"
       onClick={() =>
-        router.push(`/proposals/${department.toLowerCase().replace(/ /g, "-")}`)
+        router.push(
+          `/departments/${department.toLowerCase().replace(/ /g, "-")}`
+        )
       }
     >
-      {/* Header */}
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-            {department}
-          </h3>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm text-gray-500">{category}</span>
-            <span className="text-gray-300">•</span>
-            <span className="text-sm text-gray-500">
-              Submitted {new Date(submittedDate).toLocaleDateString()}
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg border border-gray-100 overflow-hidden flex-shrink-0">
+                <Image
+                  src={departmentLogo}
+                  alt={department}
+                  width={32}
+                  height={32}
+                  className="object-cover"
+                />
+              </div>
+              <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                {department}
+              </h3>
+            </div>
+            <span
+              className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                status === "Approved"
+                  ? "bg-green-50 text-green-700"
+                  : status === "Pending"
+                  ? "bg-yellow-50 text-yellow-700"
+                  : status === "Under Review"
+                  ? "bg-blue-50 text-blue-700"
+                  : "bg-gray-50 text-gray-700"
+              }`}
+            >
+              {status}
             </span>
           </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span className="capitalize">{category.toLowerCase()}</span>
+            <span>•</span>
+            <span>Submitted {formattedDate}</span>
+          </div>
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-sm border ${getStatusColor(
-            status
-          )}`}
-        >
-          {status}
-        </span>
-      </div>
 
-      {/* Description */}
-      {description && (
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{description}</p>
-      )}
+        {/* Description */}
+        {description && (
+          <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
+        )}
 
-      {/* Progress Bar */}
-      {/* <div className="mb-4">
-        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-500 transition-all duration-500"
-            style={{ width: `${progress}%` }}
-          />
+        {/* Details Grid */}
+        <div className="grid gap-4">
+          <div>
+            <p className="text-sm text-gray-500">Requested Amount</p>
+            <p className="text-lg font-medium text-gray-900">{amount}</p>
+          </div>
+          {/* {timeline && (
+            <div>
+              <p className="text-sm text-gray-500">Timeline</p>
+              <p className="text-sm text-gray-900">{timeline}</p>
+            </div>
+          )}
+          {objectives && (
+            <div>
+              <p className="text-sm text-gray-500">Objectives</p>
+              <p className="text-sm text-gray-900 line-clamp-2">{objectives}</p>
+            </div>
+          )} */}
         </div>
-        <div className="flex justify-between items-center mt-1">
-          <span className="text-xs text-gray-500">Review Progress</span>
-          <span className="text-xs font-medium text-gray-700">{progress}%</span>
-        </div>
-      </div> */}
 
-      {/* Footer */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
-          <p className="text-sm text-gray-500">Requested Amount</p>
-          <p className="text-lg font-medium text-gray-900">{amount}</p>
+        {/* Footer */}
+        <div className="flex justify-end">
+          <a
+            href="#"
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+          >
+            View Details →
+          </a>
         </div>
-        <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
-          <p className="text-sm text-gray-500">Expected Duration</p>
-          <p className="text-lg font-medium text-gray-900">6 months</p>
-        </div>
-      </div>
-
-      {/* View Details Button */}
-      <div className="mt-4 flex justify-end">
-        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium group-hover:underline">
-          View Details →
-        </button>
       </div>
     </div>
   );

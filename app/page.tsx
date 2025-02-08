@@ -12,6 +12,7 @@ import {
 } from "@/lib/contracts/actions";
 import { Building2, Wallet, FolderGit2, FileCheck } from "lucide-react";
 import { ethers } from "ethers";
+import Link from "next/link";
 
 const inter = Inter({ subsets: ["latin"] });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
@@ -20,6 +21,8 @@ export default function Home() {
   const [metrics, setMetrics] = useState<DepartmentMetrics | null>(null);
   const [departments, setDepartments] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [latestProposals, setLatestProposals] = useState<any[]>([]);
+  console.log("latestProposals", latestProposals);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +36,62 @@ export default function Home() {
     }).format(value);
   };
 
+  const getProposalStatus = (status: number): string => {
+    switch (status) {
+      case 0:
+        return "Pending";
+      case 1:
+        return "Under Review";
+      case 2:
+        return "Approved";
+      case 3:
+        return "Rejected";
+      default:
+        return "Unknown";
+    }
+  };
+
+  const getProposalProgress = (status: number): number => {
+    switch (status) {
+      case 0:
+        return 25;
+      case 1:
+        return 50;
+      case 2:
+        return 100;
+      case 3:
+        return 0;
+      default:
+        return 0;
+    }
+  };
+
+  const formatTimestamp = (timestamp: number | string | undefined): string => {
+    try {
+      if (!timestamp) return new Date().toISOString();
+
+      // If it's a string, try to convert to number
+      const timestampNum =
+        typeof timestamp === "string" ? Number(timestamp) : timestamp;
+
+      // Check if we need to multiply by 1000 (if timestamp is in seconds instead of milliseconds)
+      const date =
+        timestampNum > 1e10
+          ? new Date(timestampNum)
+          : new Date(timestampNum * 1000);
+
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        return new Date().toISOString();
+      }
+
+      return date.toISOString();
+    } catch (error) {
+      console.warn("Error formatting timestamp:", timestamp, error);
+      return new Date().toISOString();
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -40,7 +99,7 @@ export default function Home() {
           await DepartmentSystemActions.connectWallet();
         const departmentSystem = new DepartmentSystemActions(provider, signer);
 
-        // Fetch metrics and departments in parallel
+        // Fetch metrics and departments first
         const [departmentMetrics, deps] = await Promise.all([
           departmentSystem.getDepartmentMetrics(),
           departmentSystem.fetchAllDepartments(),
@@ -49,6 +108,7 @@ export default function Home() {
         // Process departments with USD values
         const departmentsWithUsd = await Promise.all(
           deps.slice(0, 4).map(async (dept) => {
+            // Get proposals for each department
             const proposals = await departmentSystem.getProposalsByDepartment(
               dept.departmentHead
             );
@@ -56,15 +116,83 @@ export default function Home() {
               (p: any) => Number(p.status) === 2
             ).length;
 
+            // Get the latest proposals while we're iterating through departments
+            const processedProposals = proposals
+              .map((proposal: any) => {
+                try {
+                  let parsedDescription = "No description provided";
+                  let category = proposal.category || "Infrastructure";
+                  let parsedStatus = Number(proposal.status || 0);
+                  let timeline = "";
+                  let objectives = "";
+
+                  try {
+                    if (
+                      typeof proposal.description === "string" &&
+                      proposal.description.startsWith("{")
+                    ) {
+                      const parsed = JSON.parse(proposal.description);
+                      parsedDescription =
+                        parsed.description || "No description provided";
+                      timeline = parsed.timeline || "";
+                      objectives = parsed.objectives || "";
+                      // Use category from JSON if available
+                      if (parsed.category) category = parsed.category;
+                    }
+                  } catch (e) {
+                    console.warn(
+                      "Failed to parse proposal description JSON:",
+                      e
+                    );
+                  }
+
+                  return {
+                    department: dept.name,
+                    departmentLogo:
+                      dept.logoUri || "/images/default-department.png",
+                    amount: formatUsdValue(ethers.formatEther(proposal.amount)),
+                    status: getProposalStatus(parsedStatus),
+                    submittedDate: formatTimestamp(proposal.timestamp),
+                    category: category,
+                    description: parsedDescription,
+                    timeline: timeline,
+                    objectives: objectives,
+                  };
+                } catch (error) {
+                  console.warn("Error processing proposal:", proposal, error);
+                  return null;
+                }
+              })
+              .filter(
+                (proposal): proposal is NonNullable<typeof proposal> =>
+                  proposal !== null
+              )
+              .sort(
+                (a, b) =>
+                  new Date(b.submittedDate).getTime() -
+                  new Date(a.submittedDate).getTime()
+              );
+
             return {
               name: dept.name,
               budget: await departmentSystem.convertEthToUsd(dept.budget),
               projects: approvedProjects,
               utilization: dept.efficiency + "%",
               logo: dept.logoUri || "/images/default-department.png",
+              proposals: processedProposals,
             };
           })
         );
+
+        // Collect all proposals from departments and get the latest 2
+        const allProposals = departmentsWithUsd
+          .flatMap((dept) => dept.proposals)
+          .sort(
+            (a: any, b: any) =>
+              new Date(b.submittedDate).getTime() -
+              new Date(a.submittedDate).getTime()
+          )
+          .slice(0, 2);
 
         // Get recent activity
         const allActivity = await Promise.all(
@@ -82,6 +210,7 @@ export default function Home() {
           )
           .slice(0, 2);
 
+        setLatestProposals(allProposals);
         setMetrics(departmentMetrics);
         setDepartments(departmentsWithUsd);
         setRecentActivity(recentActivities);
@@ -159,9 +288,12 @@ export default function Home() {
                 <button className="bg-black text-white px-6 py-2.5 rounded-lg text-sm hover:bg-gray-800 transition-colors">
                   Get Started
                 </button>
-                <button className="text-gray-700 bg-gray-50 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-100 transition-colors">
+                <Link
+                  href="/about"
+                  className="text-gray-700 bg-gray-50 px-6 py-2.5 rounded-lg text-sm hover:bg-gray-100 transition-colors"
+                >
                   Learn More
-                </button>
+                </Link>
               </div>
             </div>
           </div>
@@ -323,30 +455,25 @@ export default function Home() {
               </a>
             </div>
             <div className="grid md:grid-cols-2 gap-8">
-              {[
-                {
-                  department: "Department of Education",
-                  amount: "$75M",
-                  status: "Under Review",
-                  submittedDate: "2024-03-10",
-                  category: "Infrastructure",
-                  description:
-                    "Modernization of educational facilities and digital learning platforms across 500 schools.",
-                  progress: 65,
-                },
-                {
-                  department: "NASA",
-                  amount: "$120M",
-                  status: "Pending",
-                  submittedDate: "2024-03-12",
-                  category: "Research",
-                  description:
-                    "Advanced propulsion systems research and development for deep space exploration missions.",
-                  progress: 30,
-                },
-              ].map((proposal) => (
-                <ProposalCard key={proposal.department} {...proposal} />
+              {latestProposals.map((proposal, index) => (
+                <ProposalCard
+                  key={index}
+                  department={proposal.department}
+                  departmentLogo={proposal.departmentLogo}
+                  amount={proposal.amount}
+                  status={proposal.status}
+                  submittedDate={proposal.submittedDate}
+                  category={proposal.category}
+                  description={proposal.description}
+                  timeline={proposal.timeline}
+                  objectives={proposal.objectives}
+                />
               ))}
+              {latestProposals.length === 0 && (
+                <div className="col-span-2 text-center py-8">
+                  <p className="text-gray-500">No proposals found</p>
+                </div>
+              )}
             </div>
           </div>
 
