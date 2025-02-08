@@ -1,9 +1,46 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
+    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/ActivityTracker.sol": {
+      "lastModificationDate": 1738958241089,
+      "contentHash": "a39082c1fbfb15b8286454a501132b37",
+      "sourceName": "contracts/ActivityTracker.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "ActivityTracker",
+        "IDepartmentRegistry"
+      ]
+    },
     "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/BudgetController.sol": {
-      "lastModificationDate": 1738957992842,
-      "contentHash": "de66ffbc1b61e363deee0da1b9454fbf",
+      "lastModificationDate": 1739001355690,
+      "contentHash": "9d198d1ad019a7cf56f4b0d8fe350d73",
       "sourceName": "contracts/BudgetController.sol",
       "solcConfig": {
         "version": "0.8.28",
@@ -77,8 +114,8 @@
       ]
     },
     "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/ProposalManager.sol": {
-      "lastModificationDate": 1738957993621,
-      "contentHash": "5245b7a0fab78514b14d33380f0e9db7",
+      "lastModificationDate": 1739001355690,
+      "contentHash": "11b7da77c57dbf592ab51ae4708c37e9",
       "sourceName": "contracts/ProposalManager.sol",
       "solcConfig": {
         "version": "0.8.28",
@@ -113,43 +150,6 @@
       "artifacts": [
         "IDepartmentRegistry",
         "ProposalManager"
-      ]
-    },
-    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/ActivityTracker.sol": {
-      "lastModificationDate": 1738958241089,
-      "contentHash": "a39082c1fbfb15b8286454a501132b37",
-      "sourceName": "contracts/ActivityTracker.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.24"
-      ],
-      "artifacts": [
-        "ActivityTracker",
-        "IDepartmentRegistry"
       ]
     }
   }
