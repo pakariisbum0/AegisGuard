@@ -196,7 +196,7 @@ export class DepartmentSystemActions {
   // Budget Controller Actions
   async createTransaction(
     txType: TransactionType,
-    amount: bigint,
+    amount: string,
     description: string
   ) {
     const typeIndex = [
@@ -836,6 +836,62 @@ export class DepartmentSystemActions {
       throw new Error(
         error instanceof Error ? error.message : "Unknown error occurred"
       );
+    }
+  }
+
+  async getSystemMetrics(): Promise<{
+    totalDepartments: number;
+    totalBudgets: string;
+    approvedProposals: number;
+    totalProjects: number;
+    pendingTransactions: number;
+    pendingProposals: number;
+  }> {
+    try {
+      // Get metrics from contracts
+      const [budgetMetrics, proposalMetrics] = await Promise.all([
+        this.budgetController.getSystemMetrics(),
+        this.proposalManager.getProposalMetrics(),
+      ]);
+
+      const departments = await this.departmentRegistry.getAllDepartments();
+
+      return {
+        totalDepartments: departments.length,
+        totalBudgets: ethers.formatEther(budgetMetrics.totalBudget),
+        approvedProposals: proposalMetrics.approved,
+        totalProjects: proposalMetrics.total,
+        pendingTransactions: budgetMetrics.pendingTransactionCount,
+        pendingProposals: proposalMetrics.pending,
+      };
+    } catch (error) {
+      console.error("Failed to fetch system metrics:", error);
+      throw error;
+    }
+  }
+
+  // Modify createTransaction to update totals
+  async createTransaction(
+    txType: TransactionType,
+    amount: string,
+    description: string
+  ): Promise<ethers.ContractTransactionResponse> {
+    try {
+      const amountWei = ethers.parseEther(amount);
+      const tx = await this.budgetController.createTransaction(
+        Object.values(TransactionType).indexOf(txType),
+        amountWei,
+        description
+      );
+
+      // Wait for transaction and update totals
+      await tx.wait();
+      await this.budgetController.updateTotals();
+
+      return tx;
+    } catch (error) {
+      console.error("Failed to create transaction:", error);
+      throw error;
     }
   }
 }
