@@ -4,13 +4,17 @@ import DepartmentRegistryABI from "../../artifacts/contracts/DepartmentRegistry.
 import ProposalManagerABI from "../../artifacts/contracts/ProposalManager.sol/ProposalManager.json";
 import ActivityTrackerABI from "../../artifacts/contracts/ActivityTracker.sol/ActivityTracker.json";
 import { setupNetwork } from "@/lib/contracts/network";
+import GovernanceTokenABI from "../../artifacts/contracts/GovernanceToken.sol/GovernanceToken.json";
+import BudgetDAOABI from "../../artifacts/contracts/BudgetDAO.sol/BudgetDAO.json";
 
 // Contract addresses from deployment
-const CONTRACT_ADDRESSES = {
-  DEPARTMENT_REGISTRY: "0x68de061DDf89dD58bea442eA033D0E1983ad0880",
-  BUDGET_CONTROLLER: "0x372b4c6649C2F8D586a52d78d84f276FCfE16a8c",
-  PROPOSAL_MANAGER: "0x6832C283e812a611422F026Dee8F198664C33Fe9",
-  ACTIVITY_TRACKER: "0x3Bc23103bd1862F8E8EA02104d7b39B30f487f10",
+export const CONTRACT_ADDRESSES = {
+  DEPARTMENT_REGISTRY: "0x60Cf886D3266cFa4C626aaeb9c59bB50dcebb21d",
+  GOVERNANCE_TOKEN: "0x69c7C410A824176d7Fb2CE7b6a7458DfBE6D1ee2",
+  ACTIVITY_TRACKER: "0x6349Aa4C321d5f4525Bc7A7284e00f62d6e707A1",
+  BUDGET_DAO: "0x79476b9e0DF75BC1B0a534A334469dab2a7ad9B4",
+  PROPOSAL_MANAGER: "0xEFc87ADB2eE3F6ea8ed23D566011c85141272b3e",
+  BUDGET_CONTROLLER: "0xe24c772AF0FB1CA8680C2947848a5DF4F6FD1413",
 } as const;
 
 export enum TransactionType {
@@ -134,6 +138,18 @@ interface DepartmentMetrics {
 //   >;
 // }
 
+// Add new interfaces
+interface DAOProposal {
+  id: number;
+  department: string;
+  proposedBudget: bigint;
+  votesFor: bigint;
+  votesAgainst: bigint;
+  startTime: number;
+  endTime: number;
+  executed: boolean;
+}
+
 export class DepartmentSystemActions {
   private provider: ethers.Provider;
   private signer: ethers.Signer;
@@ -141,6 +157,8 @@ export class DepartmentSystemActions {
   private budgetController: ethers.Contract;
   private proposalManager: ethers.Contract;
   private activityTracker: ethers.Contract;
+  private governanceToken: ethers.Contract;
+  private budgetDAO: ethers.Contract;
 
   constructor(provider: ethers.Provider, signer: ethers.Signer) {
     this.provider = provider;
@@ -167,6 +185,18 @@ export class DepartmentSystemActions {
     this.activityTracker = new ethers.Contract(
       CONTRACT_ADDRESSES.ACTIVITY_TRACKER,
       ActivityTrackerABI.abi,
+      signer
+    );
+
+    this.governanceToken = new ethers.Contract(
+      CONTRACT_ADDRESSES.GOVERNANCE_TOKEN,
+      GovernanceTokenABI.abi,
+      signer
+    );
+
+    this.budgetDAO = new ethers.Contract(
+      CONTRACT_ADDRESSES.BUDGET_DAO,
+      BudgetDAOABI.abi,
       signer
     );
   }
@@ -1081,6 +1111,172 @@ export class DepartmentSystemActions {
       );
     } catch (error) {
       console.error("Failed to update total spent:", error);
+      throw error;
+    }
+  }
+
+  // Add DAO-related methods
+
+  // Get governance token balance
+  async getGovernanceTokenBalance(address: string): Promise<string> {
+    const balance = await this.governanceToken.balanceOf(address);
+    return ethers.formatEther(balance);
+  }
+
+  // Create a new budget proposal
+  async createBudgetProposal(
+    department: string,
+    amount: string
+  ): Promise<ethers.ContractTransaction> {
+    try {
+      const amountWei = ethers.parseEther(amount);
+      const tx = await this.budgetDAO.proposeBudget(department, amountWei);
+      return tx.wait();
+    } catch (error) {
+      console.error("Failed to create budget proposal:", error);
+      throw error;
+    }
+  }
+
+  // Check if user has voted on a proposal
+  async hasVoted(proposalId: number, address: string): Promise<boolean> {
+    try {
+      // Get the proposal details first to verify it exists
+      const proposal = await this.budgetDAO.getProposalDetails(proposalId);
+      if (!proposal) return false;
+
+      // Check if the address has voted
+      const hasVoted = await this.budgetDAO.hasVoted(proposalId, address);
+      return hasVoted;
+    } catch (error) {
+      console.error("Failed to check voting status:", error);
+      return false; // Return false on error to allow voting attempt
+    }
+  }
+
+  // Vote on a proposal
+  async voteOnProposal(proposalId: number, support: boolean): Promise<any> {
+    try {
+      const tx = await this.budgetDAO.vote(proposalId, support);
+      await tx.wait();
+
+      // After successful vote, check if the proposal can be executed
+      const proposal = await this.budgetDAO.getProposalDetails(proposalId);
+      const now = Math.floor(Date.now() / 1000);
+
+      // If voting period is over and proposal passed, execute it
+      if (now > proposal.endTime && proposal.votesFor > proposal.votesAgainst) {
+        try {
+          const executeTx = await this.budgetDAO.executeProposal(proposalId);
+          await executeTx.wait();
+          console.log("Proposal executed successfully");
+        } catch (error) {
+          console.error("Failed to execute proposal:", error);
+        }
+      }
+
+      return tx;
+    } catch (error) {
+      console.error("Failed to vote on proposal:", error);
+      throw error;
+    }
+  }
+
+  // Get proposal details
+  async getProposalDetails(proposalId: number): Promise<DAOProposal> {
+    try {
+      const proposal = await this.budgetDAO.getProposalDetails(proposalId);
+      return {
+        id: proposalId,
+        department: proposal.department,
+        proposedBudget: proposal.proposedBudget,
+        votesFor: proposal.votesFor,
+        votesAgainst: proposal.votesAgainst,
+        startTime: Number(proposal.startTime),
+        endTime: Number(proposal.endTime),
+        executed: proposal.executed,
+      };
+    } catch (error) {
+      console.error("Failed to get proposal details:", error);
+      throw error;
+    }
+  }
+
+  // Get all active proposals
+  async getActiveProposals(): Promise<DAOProposal[]> {
+    try {
+      const count = await this.budgetDAO.proposalCount();
+      console.log("Total proposal count:", count);
+
+      const proposals: DAOProposal[] = [];
+      const now = Math.floor(Date.now() / 1000);
+
+      // Iterate through all proposals
+      for (let i = 1; i <= Number(count); i++) {
+        try {
+          const proposal = await this.budgetDAO.getProposalDetails(i);
+          console.log(`Proposal ${i}:`, proposal);
+
+          // Only include non-executed proposals that haven't ended
+          if (!proposal.executed && Number(proposal.endTime) > now) {
+            proposals.push({
+              id: i,
+              department: proposal.department,
+              proposedBudget: proposal.proposedBudget,
+              votesFor: proposal.votesFor,
+              votesAgainst: proposal.votesAgainst,
+              startTime: Number(proposal.startTime),
+              endTime: Number(proposal.endTime),
+              executed: proposal.executed,
+            });
+          }
+        } catch (error) {
+          console.error(`Failed to fetch proposal ${i}:`, error);
+        }
+      }
+
+      console.log("Active proposals:", proposals);
+      return proposals;
+    } catch (error) {
+      console.error("Failed to get active proposals:", error);
+      throw error;
+    }
+  }
+
+  // Get user's voting power
+  async getVotingPower(address: string): Promise<string> {
+    try {
+      const balance = await this.governanceToken.balanceOf(address);
+      return ethers.formatEther(balance);
+    } catch (error) {
+      console.error("Failed to get voting power:", error);
+      throw error;
+    }
+  }
+
+  // Helper method to format proposal data for AI analysis
+  async getProposalDataForAI(proposalId: number): Promise<any> {
+    try {
+      const proposal = await this.getProposalDetails(proposalId);
+      const department = await this.getDepartmentDetails(proposal.department);
+
+      return {
+        proposalId: proposalId,
+        department: department.name,
+        currentBudget: ethers.formatEther(department.budget),
+        proposedBudget: ethers.formatEther(proposal.proposedBudget),
+        departmentEfficiency: department.efficiency,
+        votingPower: {
+          for: ethers.formatEther(proposal.votesFor),
+          against: ethers.formatEther(proposal.votesAgainst),
+        },
+        timeline: {
+          start: new Date(proposal.startTime * 1000).toISOString(),
+          end: new Date(proposal.endTime * 1000).toISOString(),
+        },
+      };
+    } catch (error) {
+      console.error("Failed to get proposal data for AI:", error);
       throw error;
     }
   }
