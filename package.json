@@ -6,7 +6,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "export": "next export",
     "lint": "next lint",
     "db:push": "drizzle-kit push",
     "db:studio": "npx drizzle-kit studio"
