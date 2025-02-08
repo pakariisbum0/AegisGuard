@@ -69,7 +69,6 @@ DOGE revolutionizes organizational governance by combining the power of blockcha
 
 - **Smart Contracts**: Solidity 0.8.24
 - **Blockchain**: Flow + EVM Compatible
-- **Database**: PostgreSQL with Prisma ORM
 - **File Storage**: Cloudinary CDN
 
 ### Authentication
@@ -128,20 +127,13 @@ npm install
 yarn install
 ```
 
-3. **Database Setup**
-
-```bash
-npx prisma generate
-npx prisma migrate dev
-```
-
-4. **Start Development Server**
+3. **Start Development Server**
 
 ```bash
 npm run dev
 ```
 
-5. **Smart Contract Deployment**
+4. **Smart Contract Deployment**
 
 ```bash
 npx hardhat compile
