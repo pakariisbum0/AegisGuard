@@ -72,8 +72,11 @@ contract BudgetController {
     event BudgetLimitWarning(address indexed department, uint256 spent, uint256 budget);
     event BudgetUpdated(address indexed department, uint256 oldBudget, uint256 newBudget, uint256 transactionId);
 
-    constructor(address _departmentRegistry) {
+    address public budgetDAO;
+
+    constructor(address _departmentRegistry, address _budgetDAO) {
         departmentRegistry = IDepartmentRegistry(_departmentRegistry);
+        budgetDAO = _budgetDAO;
     }
 
     modifier onlyDepartmentHead() {
@@ -81,8 +84,12 @@ contract BudgetController {
         _;
     }
 
-    modifier onlySuperAdmin() {
-        require(departmentRegistry.superAdmins(msg.sender), "Not super admin");
+    modifier onlySuperAdminOrDAO() {
+        require(
+            departmentRegistry.superAdmins(msg.sender) || 
+            msg.sender == budgetDAO,
+            "Not authorized"
+        );
         _;
     }
 
@@ -120,7 +127,7 @@ contract BudgetController {
 
     function processTransaction(uint256 transactionId) 
         external 
-        onlySuperAdmin 
+        onlySuperAdminOrDAO 
         nonReentrant 
     {
         Transaction storage transaction = transactions[transactionId];
@@ -196,7 +203,7 @@ contract BudgetController {
     function initializeDepartmentBudget(
         address department,
         uint256 initialBudget
-    ) external onlySuperAdmin nonReentrant validateAmount(initialBudget) {
+    ) external onlySuperAdminOrDAO nonReentrant validateAmount(initialBudget) {
         require(
             departmentRegistry.departments(department).isActive,
             "Department not active"
@@ -223,7 +230,10 @@ contract BudgetController {
     }
 
     // Function to update department budget
-    function updateDepartmentBudget(address department, uint256 newBudget) external onlySuperAdmin {
+    function updateDepartmentBudget(address department, uint256 newBudget) 
+        external 
+        onlySuperAdminOrDAO 
+    {
         require(departmentRegistry.isDepartmentActive(department), "Department is not active");
         uint256 currentBudget = departmentRegistry.getDepartmentBudget(department);
         
