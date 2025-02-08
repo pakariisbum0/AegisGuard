@@ -48,3 +48,7 @@ hardhat.config.js
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Environment variables
+.env.local
+.env.*.local
