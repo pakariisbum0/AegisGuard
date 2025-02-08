@@ -1,19 +1,16 @@
-// Simple in-memory database for now
-export const db = {
-  departments: new Map(),
-  proposals: new Map(),
-};
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaClient } from "@prisma/client";
+import ws from "ws";
 
-export const prisma = {
-  department: {
-    findMany: async () => {
-      return Array.from(db.departments.values());
-    },
-    create: async (data: any) => {
-      const id = Math.random().toString(36).substr(2, 9);
-      const department = { ...data.data, id };
-      db.departments.set(id, department);
-      return department;
-    },
-  },
-};
+neonConfig.webSocketConstructor = ws;
+
+// Use pooled connection for better performance
+const connectionString = process.env.DATABASE_URL;
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaNeon(pool);
+
+const prisma = new PrismaClient({ adapter });
+
+export { prisma };

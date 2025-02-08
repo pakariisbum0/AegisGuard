@@ -1,9 +1,13 @@
+import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 
 export async function GET() {
   try {
-    const departments = Array.from(db.departments.values());
+    const departments = await prisma.department.findMany({
+      include: {
+        proposals: true,
+      },
+    });
     return NextResponse.json(departments);
   } catch (error) {
     console.error("Failed to fetch departments:", error);
@@ -16,10 +20,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const id = Math.random().toString(36).substr(2, 9);
-    const department = { ...body, id };
-    db.departments.set(id, department);
+    const data = await request.json();
+    const department = await prisma.department.create({
+      data,
+    });
     return NextResponse.json(department);
   } catch (error) {
     console.error("Failed to create department:", error);
