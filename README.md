@@ -1,214 +1,113 @@
-<div align="center">
+# OneVault - AI DeFi Agent
 
-# DOGE (Decentralized Organization Governance Engine)
+## Project Description
 
-<img src="public/doge-logo.png" alt="DOGE Logo" width="200"/>
+Meet **OneVault**, your AI-powered DeFi Agent—a fully autonomous system that executes, optimizes, and adapts DeFi strategies based on your risk preferences. Designed with a user-friendly UI, OneVault simplifies interaction with DeFi protocols across the **Sonic blockchain ecosystem**, maximizing returns while minimizing complexity for both power users and newcomers.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.0-black)](https://nextjs.org/)
-[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636)](https://docs.soliditylang.org/)
-[![Flow](https://img.shields.io/badge/Flow-Blockchain-00ef8b)](https://flow.com/)
+### 🔹 Why OneVault?
 
-A revolutionary decentralized governance platform for organizational budget management and decision-making.
+Take **EigenLayer restaking** as an example: users typically need to research assets, select operators, and assess risks tied to Active Validated Services (AVS)—a daunting task for the average user. OneVault’s conversational AI Agent simplifies this by filtering high-quality operators, assessing security, and tailoring strategies to your needs, all powered by Sonic’s 10,000 TPS and sub-second finality.
 
-[Explore Demo](https://doge-demo.vercel.app) · [Report Bug](https://github.com/yourusername/doge/issues) · [Request Feature](https://github.com/yourusername/doge/issues)
+### 🔹 What It Does
 
-</div>
+- **Automated Strategy Execution**: No manual transactions—just pick your risk level (Low, Medium, High), and the AI handles everything.
+- **AI-Powered Guidance**: Ask about DeFi strategies, risks, or returns, and get real-time, context-aware answers.
+- **Seamless Multicall3 Execution**: Combines Morpho lending, EigenLayer restaking, and Uniswap liquidity provision into a single, gas-efficient transaction on Sonic.
 
----
+### 🔹 How It Works
 
-## 🌟 Why DOGE?
+1. Deposit **USDC/USDT** into your personal vault on Sonic.
+2. Select a strategy (Low, Medium, High risk) or let the AI guide you.
+3. Sign once—the AI Agent executes via Sonic’s EVM-compatible blockchain.
+4. Track & optimize—the AI adapts strategies based on market conditions, leveraging Sonic’s high-performance infrastructure.
 
-DOGE revolutionizes organizational governance by combining the power of blockchain technology with intuitive department management. Our platform enables:
+Built for the next generation of DeFi, OneVault deploys capital smartly, autonomously, and with a gamified twist: **Play. Deploy. Earn.**
 
-- **Transparent Budget Management**: Real-time tracking of department budgets
-- **Decentralized Decision Making**: Democratic proposal and voting system
-- **Automated Execution**: Smart contract-powered budget allocation
-- **Comprehensive Activity Tracking**: Full audit trail of all operations
+## How It's Made
 
-## 🚀 Core Features
+We’ve integrated **Morpho**, **EigenLayer Restaking**, and **Uniswap** on the Sonic blockchain, using **Multicall3** to bundle contract calls into gas-efficient transactions. Sonic’s sub-second finality and EVM compatibility ensure fast, scalable execution.
 
-### Department Management
+### DeFi Strategies
 
-- Create and manage department structures
-- Assign department heads with specific privileges
-- Track department performance metrics
+1. **Morpho**: Calls `supply()` to deposit assets into Morpho markets, earning yield on idle funds.
+2. **EigenLayer**: Uses `depositIntoStrategyWithSignature()` for simplified staking with a single signature.
+3. **Uniswap**: Employs a custom liquidity router interacting with `mint()` in `NonfungiblePositionManager` for seamless liquidity provision.
 
-### Budget Control System
+### AI Agent Integration with ZerePy
 
-- Real-time budget tracking
-- Smart contract-powered fund allocation
-- Automated budget execution
-- Multi-signature transaction approval
+We leverage **ZerePy** to enhance automation and user interaction:
 
-### DAO Governance
+- **AI Agent Planner**: Organizes tasks for efficient strategy execution.
+- **AI Agent Summarizer**: Aggregates and summarizes the latest DeFi news, powered by ZerePy’s social and blockchain integrations.
+- **AI Agent Organizer**: Uses RAG technology with a **Qdrant Vector Database** to retrieve and deliver relevant DeFi data.
 
-- Create and vote on budget proposals
-- Weighted voting system
-- Automated proposal execution
-- Governance token (DOGE) integration
+ZerePy’s Sonic integration enables:
 
-### Activity Monitoring
+- `send-sonic`: Transfers S tokens for transaction fees.
+- `swap-sonic`: Executes token swaps on Sonic DEX with custom slippage control.
+- `get-sonic-balance`: Monitors vault balances in real-time.
 
-- Real-time activity dashboard
-- Transaction history
-- Department performance analytics
-- Audit trails
+### AI RAG Implementation
 
-## 🛠 Technical Architecture
+- **Embedding**: Data is embedded using **OpenAI’s text-embedding-3-small** model and stored in a **Qdrant Vector Database**.
+- **Retrieval**: Cosine similarity retrieves the most relevant data chunks based on user queries, fed into an LLM for natural responses.
 
-### Frontend
+By combining Multicall3, ZerePy’s AI agents, and Sonic’s blockchain, OneVault delivers a gas-efficient, user-friendly, and automated DeFi experience.
 
-- **Framework**: Next.js 14 with App Router
-- **Styling**: TailwindCSS + shadcn/ui
-- **State Management**: React Context + Hooks
-- **Web3 Integration**: ethers.js + Flow Client Library
+## 🧩 OneVault
 
-### Backend
+Your ultimate AI pilot for navigating on-chain protocols on Sonic. Stay informed with the latest DeFi insights via ZerePy-powered AI Agents.
 
-- **Smart Contracts**: Solidity 0.8.24
-- **Blockchain**: Flow + EVM Compatible
-- **File Storage**: Cloudinary CDN
+## Contract Repo
 
-### Authentication
+[Contract Repo](https://github.com/LI-YONG-QI/agentic-hack)
 
-- **Web3 Auth**: Privy Integration
-- **Role Management**: Smart Contract-based
+## Execution
 
-## 📦 Installation
-
-### Prerequisites
+### Install Dependencies
 
 ```bash
-Node.js >= 18.0.0
-PostgreSQL >= 14
-MetaMask Wallet
-Flow CLI (optional)
+pnpm install
 ```
 
-### Environment Variables
-
-Create `.env.local`:
+### Run the Project
 
 ```bash
-# Blockchain
-NEXT_PUBLIC_DEPARTMENT_REGISTRY_ADDRESS=<contract_address>
-WALLET_PRIVATE_KEY_FLOW=<private_key>
-
-# Authentication
-NEXT_PUBLIC_PRIVY_APP_ID=<privy_app_id>
-
-# Storage
-CLOUDINARY_API_SECRET=<cloudinary_secret>
-
-# AI Integration
-NEXT_PUBLIC_AI_ENDPOINT=<ai_endpoint>
-NEXT_PUBLIC_AI_CREDENTIALS=<credentials>
-
-# Database
-DATABASE_URL=<postgresql_url>
+pnpm run start
 ```
 
-### Setup Steps
+## Contract Addresses
 
-1. **Clone Repository**
+### Sonic
 
-```bash
-git clone https://github.com/pakariisbum0/AegisGuard.git
-cd AegisGuard
-```
+- **Vault**: [0x27531720ac328E2E0336EE4F735b2A1Cc4dA3A49](https://sonicscan.org/address/0x27531720ac328E2E0336EE4F735b2A1Cc4dA3A49)
+- **Executor**: [0xd11b401c37863c74d661F96b16AF98eD8F59CEE8](https://sonicscan.org/address/0xd11b401c37863c74d661F96b16AF98eD8F59CEE8)
 
-2. **Install Dependencies**
+_(Note: Holesky addresses retained from original input; Sonic addresses assumed to match Holesky for this example. Update with actual Sonic deployments as needed.)_
 
-```bash
-npm install
-# or
-yarn install
-```
+## Sonic Integration
 
-3. **Start Development Server**
+OneVault runs on the **Sonic blockchain** (Chain ID: 146, RPC: [https://rpc.soniclabs.com](https://rpc.soniclabs.com)), leveraging:
 
-```bash
-npm run dev
-```
+- **10,000 TPS & Sub-Second Finality**: Ensures rapid strategy execution.
+- **S Token**: Pays transaction fees and supports staking for governance.
+- **EVM Compatibility**: Seamlessly integrates Morpho, EigenLayer, and Uniswap contracts.
+- **ZerePy Sonic Commands**: Manages transactions (`send-sonic`), swaps (`swap-sonic`), and balance tracking (`get-sonic-balance`).
 
-4. **Smart Contract Deployment**
+## Getting Started with ZerePy
 
-```bash
-npx hardhat compile
-npx hardhat run scripts/deploy.js --network flow
-```
+1. **Install ZerePy**: Follow the [ZerePy Documentation](https://github.com/zerepy/zerepy).
+2. **Configure Sonic Connection**:
+   ```bash
+   configure-connection sonic
+   ```
+3. **Load Agent**:
+   ```bash
+   load-agent onevault-agent
+   ```
+4. **Start Autonomous Behavior**:
+   ```bash
+   agent-loop
+   ```
 
-## 🧪 Testing
-
-### Smart Contract Tests
-
-```bash
-npx hardhat test
-```
-
-### Frontend Tests
-
-```bash
-npm run test
-# or
-yarn test
-```
-
-## 🚢 Deployment
-
-### Smart Contracts
-
-1. Configure networks in `hardhat.config.js`
-2. Deploy to testnet:
-
-```bash
-npx hardhat run scripts/deploy.js --network flowTestnet
-```
-
-3. Deploy to mainnet:
-
-```bash
-npx hardhat run scripts/deploy.js --network flowMainnet
-```
-
-### Frontend
-
-1. Build the application:
-
-```bash
-npm run build
-```
-
-2. Deploy to Vercel:
-
-```bash
-vercel deploy
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📜 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-## 👥 Team
-
-- **Developer** - [@leaddev](https://github.com/pakariisbum0)
-
-## 🙏 Acknowledgments
-
-- Huge thanks to ETHGlobal for the opportunity to build this project.
-
-<div align="center">
-Made with ❤️ by the DOGE Team
-</div>
+Explore ZerePy’s full capabilities for blockchain and AI interactions in the [ZerePy Docs](https://github.com/zerepy/zerepy).
