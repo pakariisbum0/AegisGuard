@@ -1,0 +1,246 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "Morpho",
+  "sourceName": "contracts/Morpho.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "DOMAIN_SEPARATOR",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "loanToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "collateralToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "oracle",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "irm",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "lltv",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct Morpho.MarketParams",
+          "name": "marketParams",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "assets",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "shares",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "onBehalf",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "receiver",
+          "type": "address"
+        }
+      ],
+      "name": "borrow",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "feeRecipient",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "isAuthorized",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "nonce",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "loanToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "collateralToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "oracle",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "irm",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "lltv",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct Morpho.MarketParams",
+          "name": "marketParams",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "assets",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "shares",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "onBehalf",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "supply",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60a060405234801561001057600080fd5b506040516104d33803806104d383398101604081905261002f91610123565b600080546001600160a01b0319166001600160a01b03831617905560408051808201825260068152654d6f7270686f60d01b6020918201528151808301835260018152603160f81b9082015281517f8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f918101919091527f60c5da11e99eb3cde3ccc51421ee307f73dc44527b3c6223ac0c592d1d811272918101919091527fc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc660608201524660808201523060a082015260c00160408051601f19818403018152919052805160209091012060805250610153565b60006020828403121561013557600080fd5b81516001600160a01b038116811461014c57600080fd5b9392505050565b60805161036661016d6000396000608701526103666000f3fe608060405234801561001057600080fd5b506004361061007d5760003560e01c806365e4ad9e1161005b57806365e4ad9e1461011757806370ae92d2146101555780638da5cb5b14610175578063a99aad891461018857600080fd5b80633644e5151461008257806346904840146100bc57806350d8cd4b146100e7575b600080fd5b6100a97f000000000000000000000000000000000000000000000000000000000000000081565b6040519081526020015b60405180910390f35b6001546100cf906001600160a01b031681565b6040516001600160a01b0390911681526020016100b3565b6101026100f53660046101d8565b6000809550959350505050565b604080519283526020830191909152016100b3565b610145610125366004610232565b600260209081526000928352604080842090915290825290205460ff1681565b60405190151581526020016100b3565b6100a9610163366004610265565b60036020526000908152604090205481565b6000546100cf906001600160a01b031681565b610102610196366004610287565b600080965096945050505050565b600060a082840312156101b657600080fd5b50919050565b80356001600160a01b03811681146101d357600080fd5b919050565b600080600080600061012086880312156101f157600080fd5b6101fb87876101a4565b945060a0860135935060c0860135925061021760e087016101bc565b915061022661010087016101bc565b90509295509295909350565b6000806040838503121561024557600080fd5b61024e836101bc565b915061025c602084016101bc565b90509250929050565b60006020828403121561027757600080fd5b610280826101bc565b9392505050565b60008060008060008061012087890312156102a157600080fd5b6102ab88886101a4565b955060a0870135945060c087013593506102c760e088016101bc565b925061010087013567ffffffffffffffff808211156102e557600080fd5b818901915089601f8301126102f957600080fd5b81358181111561030857600080fd5b8a602082850101111561031a57600080fd5b602083019450809350505050929550929550929556fea2646970667358221220fffea647c12d29560c03e9b60eb17e4c66a37008c9ef3db95b640402734ada4a64736f6c63430008130033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061007d5760003560e01c806365e4ad9e1161005b57806365e4ad9e1461011757806370ae92d2146101555780638da5cb5b14610175578063a99aad891461018857600080fd5b80633644e5151461008257806346904840146100bc57806350d8cd4b146100e7575b600080fd5b6100a97f000000000000000000000000000000000000000000000000000000000000000081565b6040519081526020015b60405180910390f35b6001546100cf906001600160a01b031681565b6040516001600160a01b0390911681526020016100b3565b6101026100f53660046101d8565b6000809550959350505050565b604080519283526020830191909152016100b3565b610145610125366004610232565b600260209081526000928352604080842090915290825290205460ff1681565b60405190151581526020016100b3565b6100a9610163366004610265565b60036020526000908152604090205481565b6000546100cf906001600160a01b031681565b610102610196366004610287565b600080965096945050505050565b600060a082840312156101b657600080fd5b50919050565b80356001600160a01b03811681146101d357600080fd5b919050565b600080600080600061012086880312156101f157600080fd5b6101fb87876101a4565b945060a0860135935060c0860135925061021760e087016101bc565b915061022661010087016101bc565b90509295509295909350565b6000806040838503121561024557600080fd5b61024e836101bc565b915061025c602084016101bc565b90509250929050565b60006020828403121561027757600080fd5b610280826101bc565b9392505050565b60008060008060008061012087890312156102a157600080fd5b6102ab88886101a4565b955060a0870135945060c087013593506102c760e088016101bc565b925061010087013567ffffffffffffffff808211156102e557600080fd5b818901915089601f8301126102f957600080fd5b81358181111561030857600080fd5b8a602082850101111561031a57600080fd5b602083019450809350505050929550929550929556fea2646970667358221220fffea647c12d29560c03e9b60eb17e4c66a37008c9ef3db95b640402734ada4a64736f6c63430008130033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
