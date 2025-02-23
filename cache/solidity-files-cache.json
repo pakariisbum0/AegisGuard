@@ -1,237 +1,6 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/ActivityTracker.sol": {
-      "lastModificationDate": 1738958241089,
-      "contentHash": "a39082c1fbfb15b8286454a501132b37",
-      "sourceName": "contracts/ActivityTracker.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.24"
-      ],
-      "artifacts": [
-        "ActivityTracker",
-        "IDepartmentRegistry"
-      ]
-    },
-    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/BudgetController.sol": {
-      "lastModificationDate": 1739016910287,
-      "contentHash": "728d05d4afd656dfb2d95dfbff2e960b",
-      "sourceName": "contracts/BudgetController.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./DepartmentRegistry.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.24"
-      ],
-      "artifacts": [
-        "BudgetController",
-        "IDepartmentRegistry"
-      ]
-    },
-    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/DepartmentRegistry.sol": {
-      "lastModificationDate": 1738935109718,
-      "contentHash": "864ff8e73b92c59b7102b1c23cde828b",
-      "sourceName": "contracts/DepartmentRegistry.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.24"
-      ],
-      "artifacts": [
-        "DepartmentRegistry"
-      ]
-    },
-    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/ProposalManager.sol": {
-      "lastModificationDate": 1739002790997,
-      "contentHash": "5245b7a0fab78514b14d33380f0e9db7",
-      "sourceName": "contracts/ProposalManager.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./DepartmentRegistry.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.24"
-      ],
-      "artifacts": [
-        "IDepartmentRegistry",
-        "ProposalManager"
-      ]
-    },
-    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/BudgetDAO.sol": {
-      "lastModificationDate": 1739019177297,
-      "contentHash": "9facf5b84e5799706abf750beb628a14",
-      "sourceName": "contracts/BudgetDAO.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./GovernanceToken.sol",
-        "./BudgetController.sol",
-        "./DepartmentRegistry.sol",
-        "@openzeppelin/contracts/access/Ownable.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.24"
-      ],
-      "artifacts": [
-        "BudgetDAO"
-      ]
-    },
-    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/GovernanceToken.sol": {
-      "lastModificationDate": 1739016910287,
-      "contentHash": "79ebb870a180f6bcfc845c15a7d5c37a",
-      "sourceName": "contracts/GovernanceToken.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/token/ERC20/ERC20.sol",
-        "@openzeppelin/contracts/access/Ownable.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.24"
-      ],
-      "artifacts": [
-        "GovernanceToken"
-      ]
-    },
     "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/node_modules/@openzeppelin/contracts/access/Ownable.sol": {
       "lastModificationDate": 1738885851118,
       "contentHash": "d3c790edc9ccf808a17c5a6cd13614fd",
@@ -457,6 +226,149 @@
         "IERC1155Errors",
         "IERC20Errors",
         "IERC721Errors"
+      ]
+    },
+    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/Executor.sol": {
+      "lastModificationDate": 1740299753525,
+      "contentHash": "66bd9299144124b5d23e3b7811a5cb07",
+      "sourceName": "contracts/Executor.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Executor",
+        "IVault"
+      ]
+    },
+    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/Morpho.sol": {
+      "lastModificationDate": 1740299753525,
+      "contentHash": "909a8d040e966fd646fe44315f4bed3c",
+      "sourceName": "contracts/Morpho.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Morpho"
+      ]
+    },
+    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/Vault.sol": {
+      "lastModificationDate": 1740301506008,
+      "contentHash": "079950ec22e17212dcb934b5d9d78ac8",
+      "sourceName": "contracts/Vault.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./interfaces/IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Vault"
+      ]
+    },
+    "/Users/albertmends/Documents/2025-Hackathon/aegis-guard-agent/contracts/interfaces/IERC20.sol": {
+      "lastModificationDate": 1740301506007,
+      "contentHash": "0b3627c4761579377209b09679943acd",
+      "sourceName": "contracts/interfaces/IERC20.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20"
       ]
     }
   }
