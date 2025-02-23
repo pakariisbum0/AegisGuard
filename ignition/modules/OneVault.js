@@ -1,25 +1,31 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
-// Default USDC addresses
-const MAINNET_USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+// Default USDC address for Sonic testnet
 const TEST_USDC = "0x1234567890123456789012345678901234567890";
 
 module.exports = buildModule("OneVault", (m) => {
-  // Get deployment parameters with defaults
-  const usdc = m.getParameter("usdc", TEST_USDC);
-  const owner = m.getParameter("owner", m.getAccount(0));
+  try {
+    // Get USDC address from parameters or use default
+    const usdc = m.getParameter("usdc", TEST_USDC);
 
-  // Deploy Vault first
-  const vault = m.contract("Vault", [owner, usdc], {
-    from: owner,
-    gasLimit: 5000000,
-  });
+    // Get deployer account synchronously
+    const deployer = m.getAccount(0);
 
-  // Deploy Executor with Vault reference
-  const executor = m.contract("Executor", [vault], {
-    from: owner,
-    gasLimit: 4000000,
-  });
+    // Deploy Vault with explicit deployer address
+    const vault = m.contract("contracts/Vault.sol:Vault", {
+      args: [deployer, usdc],
+      from: deployer,
+    });
 
-  return { vault, executor };
+    // Deploy Executor with Vault reference
+    const executor = m.contract("contracts/Executor.sol:Executor", {
+      args: [vault],
+      from: deployer,
+    });
+
+    return { vault, executor };
+  } catch (error) {
+    console.error("Deployment error:", error);
+    throw error;
+  }
 });
