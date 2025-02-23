@@ -27,6 +27,12 @@ module.exports = {
       },
     },
   },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
+  },
   allowUnlimitedContractSize: true,
   throwOnTransactionFailures: true,
   throwOnCallFailures: true,
